@@ -38,12 +38,23 @@ compensate_data <- function(fcs_fs,
   }
   # compensate and save in new flowSet object
   fs_comp <- compensate(fcs_fs, comp)
-  # generate Seurat object
-  seu_comp <- create_seurat(fs_comp, data.frame(seu@misc))
+  # create matrix of all fcs files in flowSet
+  matrix <- fsApply(fs_comp, exprs)
+  # subset to only contain channels present in panel
+  matrix <- matrix[, colnames(matrix) %in% seu@misc$fcs_colname]
+  # rename channels to antigen in panel
+  colnames(matrix) <- seu@misc$antigen[match(colnames(matrix), seu@misc$fcs_colname)]
+  # only keep cells present in original Seurat object
+  matrix <- matrix[colnames(seu),]
+  # create Seurat object
+  seu_comp <- CreateSeuratObject(counts = t(matrix),
+                            assay = "comp",
+                            min.cells = 0,
+                            min.features = 0)
+  # match cells with original object (in case cells were remove)
+  seu_comp <- subset(seu_comp, cells = colnames(seu))
   # add compensated matrix to new assay
-  seu[["comp"]] <- CreateAssayObject(counts = GetAssayData(seu_comp),
-                                     min.cells = 0,
-                                     min.features = 0)
+  seu[["comp"]] <- seu_comp[["comp"]]
   # make compensated data as default assay
   DefaultAssay(seu) <- "comp"
   return(seu)
