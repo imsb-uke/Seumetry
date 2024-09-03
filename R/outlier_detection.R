@@ -18,11 +18,14 @@
 remove_outliers_manual <- function(seu,
                                    thresholds,
                                    negative = TRUE) {
+  # get expression matrix
+  data <- GetAssayData(seu)
+  # make list of cells to remove
   remove_cells <- c()
   for(marker in names(thresholds)) {
     # get cell names of cells not passing threshold
-    if(isTRUE(negative)) cells <- names(which(seu@assays$comp@data[marker,] < thresholds[[marker]]))
-    if(!isTRUE(negative)) cells <- names(which(seu@assays$comp@data[marker,] > thresholds[[marker]]))
+    if(isTRUE(negative)) cells <- names(which(data[marker,] < thresholds[[marker]]))
+    if(!isTRUE(negative)) cells <- names(which(data[marker,] > thresholds[[marker]]))
     # add cellnames to the array
     remove_cells <- c(remove_cells, cells)
   }
@@ -32,7 +35,6 @@ remove_outliers_manual <- function(seu,
   seu <- seu[,!colnames(seu) %in% remove_cells]
   return(seu)
 }
-
 
 #' Labels potentially noisy or outlier events in Seurat object (seu$outlier)
 #' 
