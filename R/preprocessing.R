@@ -75,6 +75,8 @@ create_seurat <- function(fcs_fs,
   matrix_unused <- matrix[, !(colnames(matrix) %in% panel$fcs_colname)]
   # subset to only contain channels present in panel
   matrix <- matrix[, colnames(matrix) %in% panel$fcs_colname]
+  # Seurat does not allow underscores in feature names; renaming antigen names
+  panel$antigen <- gsub("_", "-", panel$antigen)
   # rename channels to antigen in panel
   colnames(matrix) <- panel[match(colnames(matrix), panel$fcs_colname), ]$antigen
   # transpose to have Seurat format
