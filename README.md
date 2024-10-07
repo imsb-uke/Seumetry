@@ -9,8 +9,8 @@ devtools::install_github("imsb-uke/Seumetry")
 ```
 
 ## Tutorial
-Please see vignette for instructions on how to analyse cytometry data using Seumetry.  
-Data used for the vignette is available through zenodo: https://doi.org/10.5281/zenodo.11935872
+Please see our tutorial for instructions on how to analyse cytometry data using Seumetry: https://imsb-uke.github.io/Seumetry/vignettes/vignette.html  
+Data used in this tutorial is available through Zenodo: https://doi.org/10.5281/zenodo.11935872
 
 ## Publication
 Seumetry is currently available as a preprint on bioRxiv: https://www.biorxiv.org/content/10.1101/2024.07.23.604747v1
