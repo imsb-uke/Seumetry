@@ -56,6 +56,7 @@ create_flowset <- function(fcs_dir,
 #' @param fcs_fs A flowCore flowSet generated with create_flowset.
 #' @param metadata Data.frame with metadata for each FCS file (rows). Must contain columns "sample_id" and "file_name" and each row must correspond to the flowFrames in the flowSet.
 #' @param panel A panel containing all information for the markers. See vignette for more information on how to generate a panel_df. Function will only use channels indicated in panel$fcs_colnames and will rename channels to panel$antigen.
+#' @param derandomize CyTOF data may contain non-integer values due to normalization. If derandomize is set to TRUE, values will be rounded up to nearest whole number, but only for used channels. Default: FALSE.
 #' @param ... Additional parameters that will be passed on to Seurat::CreateSeuratObject.
 #' @return A Seurat Object of all merged FCS files.
 #' @export
@@ -64,6 +65,7 @@ create_flowset <- function(fcs_dir,
 create_seurat <- function(fcs_fs,
                           panel,
                           metadata = NULL,
+                          derandomize = FALSE,
                           ...) {
   # create matrix of all fcs files in flowSet
   matrix <- fsApply(fcs_fs, exprs)
@@ -80,7 +82,12 @@ create_seurat <- function(fcs_fs,
   # rename channels to antigen in panel
   colnames(matrix) <- panel[match(colnames(matrix), panel$fcs_colname), ]$antigen
   # transpose to have Seurat format
-  matrix <- t(matrix) 
+  matrix <- t(matrix)
+  # derandomize values
+  if(derandomize) {
+      message("Derandomizing values (rounding up to nearest whole number).")
+      matrix <- ceiling(matrix)
+  }
   # create cell level metadata
   if(!is.null(metadata)) {
     # get all cell_ids
