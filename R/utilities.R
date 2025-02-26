@@ -61,3 +61,72 @@ export_fcs <- function(fcs_fs,
         return(fcs_ff)
     }
 }
+
+
+#' Converts a Seurat object to a FlowFrame, FlowSet or SingleCellExperiment Object.
+#'
+#' Takes Seurat object as input and returns FlowFrame, FlowSet or SingleCellExperiment Object. These can be used for integration of third-party tools. By default uses DefaultAssay and Slot from Seurat object as Matrix. Only channels used in matrix and present in panel are used for conversion. Unused Channels will not be included.
+#'
+#' @param seu A seurat object.
+#' @param to Can be either FF for FlowFrame, FS for FlowSet, or SCE for SingleCellExperiment.
+#' @param assay Assay from Seurat object to be used for conversion. If empty, uses DefaultAssay.
+#' @param slot Slot from Seurat object to be used for conversion. If empty, uses "data" slot.
+#' @param split_by Indicate which seu@meta.data column to use to split data into individual FlowFrames to be used in a FlowSet.
+#' @return Either a FlowFrame, FlowSet, or SingleCellExperiment Object.
+#' @export
+#' @examples
+#' sce = convert_seurat(seu, assay = "comp", to = "SCE")
+convert_seurat <- function(seu,
+                           to = c("FF", "FS", "SCE"),
+                           assay = NULL,
+                           slot = "data",
+                           split_by) {
+    # get expression data
+    if(is.null(assay)) assay <- DefaultAssay(seu)
+    mtx <- as.matrix(GetAssayData(seu, assay = assay, slot = slot))
+    # get panel data
+    panel <- as.data.frame(seu@misc)
+    # FLOWFRAME
+    if(to == "FF"){
+        # fix panel data
+        row.names(panel) <- paste0("$P", row.names(panel))
+        names(panel)[1:2] <- c("desc", "name")
+        panel$minRange <- 0
+        panel$maxRange <- 0
+        panel$range <- 0
+        # create annotated data frame
+        an_df <- AnnotatedDataFrame(data = panel)
+        # create flowframe
+        ff <- flowFrame(t(mtx), an_df)
+        # set identifier
+        identifier(ff) <- "FlowFrame from Seurat"
+        # return flowframe
+        return(ff)
+    }
+    # FLOWSET
+    if(to == "FS"){
+        if(missing(split_by)) stop("If converting to flowSet, split_by parameter must be provided.")
+        # split Seurat Object
+        seu_split <- SplitObject(seu, split.by = split_by)
+        # make list of flowframes using recursion
+        ff_list <- sapply(names(seu_split), function(x) convert_seurat(seu_split[[x]], to = "FF", assay = assay, slot = slot))
+        # generate flowset
+        fs <- flowSet(ff_list)
+        # return FlowSet
+        return(fs)
+    }
+    # SCE
+    if(to == "SCE"){
+        # get cell-level metadata
+        metadata <- as.data.frame(seu@meta.data)
+        # get reductions
+        reductions <- list()
+        for(reduction in names(seu@reductions)){
+            reductions[[reduction]] <- seu@reductions[[reduction]]@cell.embeddings
+        }
+        # construct SCE
+        sce <- SingleCellExperiment(assays = list(counts = mtx), colData = metadata, rowData = panel, reducedDims = reductions)
+        # return SingleCellExperiment
+        return(sce)
+    }
+}
