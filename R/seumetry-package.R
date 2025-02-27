@@ -3,6 +3,7 @@
 #' @importFrom flowCore read.flowSet exprs fsApply spillover fsApply compensate write.FCS compensation flowFrame flowSet identifier<-
 #' @importFrom flowWorkspace flowjo_biexp
 #' @importFrom Biobase AnnotatedDataFrame
-#' @importFrom SingleCellExperiment SingleCellExperiment
+#' @importFrom SingleCellExperiment SingleCellExperiment counts
 #' @importFrom FlowSOM ReadInput BuildSOM metaClustering_consensus GetClusters GetMetaclusters
+#' @importFrom CATALYST normCytof
 NULL
