@@ -15,7 +15,10 @@ Data used in this tutorial is available through Zenodo: https://doi.org/10.5281/
 ## Docker
 A Docker file and image are supplied with in this repository. This image is based on rocker/rstudio and contains rstudio-server and an installation of the current release of Seumetry. Rstudio can be accessed in the browser at http://localhost:8787.  
 You can download the Docker image and run a container:
-`docker run --name {CONTAINER_NAME} -ti -e DISABLE_AUTH=true -p 8787:8787 -v {PROJECT_DIR}:/home/rstudio/workspace seumetry`
+```{bash}
+docker pull ghcr.io/imsb-uke/seumetry
+docker run --name {CONTAINER_NAME} -ti -e DISABLE_AUTH=true -p 8787:8787 -v {PROJECT_DIR}:/home/rstudio/workspace seumetry
+```
 
 ## Publication
 Seumetry is currently available as a preprint on bioRxiv: https://www.biorxiv.org/content/10.1101/2024.07.23.604747v1
