@@ -21,45 +21,30 @@ median_expression <- function(seu,
 }
 
 
-#' Export specific cells to FCS file
+#' Exports FCS files from Seurat object.
 #'
-#' This function uses the initially create flowSet and exports original FCS files based on cell_IDs in Seurat object using [flowCore::write.FCS()]. Can be used to view data with external software such as FlowJo, e.g. to verify cluster annotation.
+#' This function uses a specified assay and slot from a Seurat object, converts the Object to a flowFrame, and exports the flowFrame as a FCS file. This can be used, for example, to visualize specific clusters or cells in a traditional Flow Cytometry Software.
 #'
-#' @param fcs_fs The flowCore FlowSet that was prepared in the first step during data prep. See [create_flowset()].
-#' @param cell_ids Name of cells that should be exported (colnames((seu)).
+#' @param seu A seurat object.
+#' @param assay Assay from Seurat object to be used for conversion. If empty, uses DefaultAssay.
+#' @param slot Slot from Seurat object to be used for conversion. If empty, uses "data" slot.
 #' @param filename Path and filename where FCS file should be written to.
-#' @return If no filename is indicated, this function will return a flowFrame instead of saving a FCS file.
 #' @export
 #' @examples
-#' # load flowSet
-#' fcs_fs <- readRDS("fcs_fs.rds")
 #' # subset Seurat object to specific cluster
 #' seu_sub <- subset(seu, subset = seurat_clusters == 1)
-#' # export FCS file containing cells from this cluster
-#' export_fcs(fcs_fs, cell_ids = colnames(seu_sub), filename = "cluster_1.fcs")
-export_fcs <- function(fcs_fs,
-                       cell_ids = NULL,
-                       filename) {
-    # merge all expression matrices from flowFrames from flowSet
-    merged <- lapply(fcs_fs@frames, function(x) exprs(x))
-    merged <- do.call(rbind, merged)
-    # get a references flowFrame from flowSet
-    fcs_ff <- fcs_fs[[1]]
-    # if desired, subset the merged flowSet using specific cellnames
-    if(!is.null(cell_ids)) {
-        merged <- merged[which(row.names(merged) %in% cell_ids),]
-    }
-    # replace exprs in this flowFrame by the merged exprs matrix
-    fcs_ff@exprs <- merged
-    # export FCS
-    if(!is.null(filename)) {
-        # write FCS (flowCore)
-        write.FCS(fcs_ff, filename = filename)
-        print(paste("FCS file", filename, "containing", nrow(merged), "cells written successfully."))
-    }else{
-        # if exporting not desired, just return created flowFrame
-        return(fcs_ff)
-    }
+#' # export FCS file containing cells from this cluster using raw data
+#' export_fcs(seu_sub, filename = "cluster_1.fcs", assay = "fcs", slot = "counts")
+export_fcs <- function(seu,
+                       filename,
+                       assay = NULL,
+                       slot = "data") {
+    # convert to flowframe
+    ff <- convert_seurat(seu, "FF", assay = assay, slot = slot)
+    # export fcs
+    write.FCS(ff, filename = filename)
+    message(paste("FCS file", filename, "written successfully."))
+    
 }
 
 
