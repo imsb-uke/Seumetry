@@ -23,4 +23,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: ghcr.io/seumetry:${{ github.event.release.tag_name }}
+          tags: |
+            ghcr.io/imsb-uke/seumetry:${{ github.event.release.tag_name }}
+            ghcr.io/imsb-uke/seumetry:latest
