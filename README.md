@@ -13,7 +13,7 @@ Please see our tutorial for instructions on how to analyse cytometry data using 
 Data used in this tutorial is available through Zenodo: https://doi.org/10.5281/zenodo.11935872
 
 ## Docker
-A Docker file and image are supplied with in this repository. This image is based on rocker/rstudio and contains rstudio-server and an installation of the current release of Seumetry. Rstudio can be accessed in the browser at http://localhost:8787.  
+A Docker file and image are supplied with this repository. The image is based on rocker/rstudio and contains rstudio-server and an installation of the current release of Seumetry. Rstudio can be accessed in the browser at http://localhost:8787.  
 You can download the Docker image and run a container:
 ```{bash}
 docker pull ghcr.io/imsb-uke/seumetry
