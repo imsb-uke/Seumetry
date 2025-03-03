@@ -37,7 +37,9 @@ To demonstrate the functionality and workflow of Seumetry, we generated a high-d
 # Setup
 Load libraries
 ```{r setup}
+#BiocManager::install("EnhancedVolcano")
 require(pheatmap)
+library(EnhancedVolcano)
 library(Seumetry)
 library(ggplot2)
 library(dplyr)
@@ -128,7 +130,7 @@ seu <- create_seurat(fcs_fs, panel, metadata, derandomize = FALSE)
 seu
 ```
 
-Derandomization: For CyTOF data, it might be desired to derandomize data, which
+Derandomization: For mass cytometry data, it might be desired to derandomize data, which
 will round intensity values up to then nearest whole number
 (see https://biosurf.org/cytof_data_scientist.html#34_Data_transformations). 
 This is implemented in the create_seurat function by setting derandomize to TRUE.
@@ -140,20 +142,22 @@ plot_cellnumber(seu)
 
 # Preprocessing
 ## Bead normalisation
-For CyTOF data, bead normalisation may be required. This vignette uses a flow
-cytometry test dataset, so bead normalisation is not applied. Please refer to
-section "Other features" for a description of bead normalisation implementation.
+For mass cytometry data, bead normalization may be required. This vignette uses
+a flow cytometry test dataset, so bead normalization is not applied. Please refer
+to section "Other features" for a description of bead normalization implementation.
 
 ## Compensation
 Compensation is based on spillover matrices that can be provided within the FCS 
 file or as a data.frame.  
 
-Option 1) Use external spillover matrix directly: same compensation for all files.  
-Option 2) Use spillover matrix saved in FCS files: same compensation for all files.  
-Option 3) Use spillover matrix saved in FCS files: compensation matrix used from
+There are different options how to supply the matrix. For details see compensate_data 
+function documentation. Here, we use option 3.  
+- Option 1) Use external spillover matrix directly: same compensation for all files.  
+- Option 2) Use spillover matrix saved in FCS files: same compensation for all files.  
+- Option 3) Use spillover matrix saved in FCS files: compensation matrix used from
 individual FCS files, thus can be different for each file.  
 
-The compensate_data function will use flowCore::compensate to compensate the raw 
+The compensate_data function will use flowCore::compensate() to compensate the raw 
 values and write a new assay into the Seurat object called "comp". The compensated 
 data are saved in "counts" slot.  
 Warning: if multiple spillover matrices are present in FCS files, use the correct one!  
@@ -334,6 +338,7 @@ for(i in 1:nrow(problem_channels[[3]]))
                           x = problem_channels[[3]][i, "Channel_1"],
                           y = problem_channels[[3]][i, "Channel_2"])
 do.call(gridExtra::grid.arrange, c(plots, ncol = 4))
+rm(plots)
 ```
 
 If a channel combination does not look like it contains aggregates, remove that
@@ -359,6 +364,7 @@ for(i in 1:nrow(problem_channels[[3]]))
                           style = "point",
                           color = "aggregate_score")
 do.call(gridExtra::grid.arrange, c(plots, ncol = 4))
+rm(plots)
 ```
 
 ```{r aggregate-final, fig.width=15, fig.height=12}
@@ -370,6 +376,7 @@ for(i in 1:nrow(problem_channels[[3]]))
                           style = "point",
                           color = "aggregate")
 do.call(gridExtra::grid.arrange, c(plots, ncol = 4))
+rm(plots)
 ```
 
 If the result is satisfactory, the aggregates can be removed.
@@ -410,19 +417,18 @@ seu <- Seurat::RunUMAP(seu, dims = 1:10)
 ```
 
 Integration of multiple datasets or batch correction methods based on PCA such
-as CCA integration or harmony can also be used.
+as CCA integration or harmony can also be used (not done in this tutorial).
 
-Now, all Seurat visualisations are available.  
+All Seurat visualisations are available. 
 For more detail, see https://satijalab.org/seurat/
-```{r seurat-dimplot, fig.width=15, fig.height=4}
-plot1 <- Seurat::DimPlot(seu, label = TRUE) + set_theme
-plot2 <- Seurat::DimPlot(seu, group.by = "sample_id") + set_theme
-plot3 <- Seurat::DimPlot(seu, group.by = "layer") + set_theme
-plot1 + plot2 + plot3
+```{r seurat-dimplot, fig.width=10, fig.height=4}
+plot1 <- Seurat::DimPlot(seu, group.by = "sample_id") + set_theme
+plot2 <- Seurat::DimPlot(seu, group.by = "layer") + set_theme
+plot1 + plot2
 ```
 
 ```{r seurat-vln, fig.width=10, fig.height=5}
-Seurat::VlnPlot(seu, features = c("CD8", "CD4"), pt.size = 0) & set_theme
+Seurat::VlnPlot(seu, features = c("CD8", "CD4"), pt.size = 0) & set_theme & RotatedAxis()
 ```
 
 It is recommended to use a custom colorpalette when using UMAP to plot expression 
@@ -435,7 +441,7 @@ Seurat::FeaturePlot(seu, features = c("CD8", "CD4")) &
 ## Clustering
 For clustering, multiple methods such as Louvain algorithm are accessible via
 Seurat:
-```{r}
+```{r seurat-clustering, fig.width=5, fig.height=5}
 # run clustering using 10 PCs
 seu <- Seurat::FindNeighbors(seu, dims = 1:10)
 seu <- Seurat::FindClusters(seu, resolution = 0.5)
@@ -443,7 +449,7 @@ Seurat::DimPlot(seu, group.by = "seurat_clusters") + set_theme
 ```
 
 We also implemented a FlowSOM and metaclustering via FlowSOM R package
-```{r}
+```{r flowsom-clustering, fig.width=5, fig.height=5}
 # run flowSOM and metaclustering
 seu <- run_FlowSOM(seu, metaclusters = 10, xdim = 10, ydim = 10)
 Seurat::DimPlot(seu, group.by = "SOM_cl") + set_theme
@@ -486,7 +492,7 @@ differential_abundance(seu,
 
 Here, we compare IEL vs LPL using a contrast of c(1, -1).
 ```{r da-analysis}
-# calculate differential abundance: UC vs healthy
+# calculate differential abundance
 da_res <- differential_abundance(seu,
                                  attribute = "seurat_clusters",
                                  group_by = "sample_id",
@@ -578,17 +584,17 @@ plot_cellnumber(seu, "sample_id")
 # Other features
 ## Bead normalisation
 The test dataset used throughout this vignette is a flow cytometry dataset,
-bead normalisation is only available for CyTOF data. Here, we implemented 
+bead normalisation is only available for mass cytometry data. Here, we implemented 
 bead normalisation by using a wrapper function for the normCytof() 
 function of the [CATALYST](https://github.com/HelenaLC/CATALYST) package.
 To showcase the bead normalisation implementation in Seumetry, we use 
 the raw_data provided by CATALYST.
-```{r median-expression}
+```{r get-data}
 library(CATALYST)
 data("raw_data")
 ```
 
-Now we need to prepare the raw data a bit so it can be loaded into Seumetry.
+Now we need to prepare a panel and add cell IDs to load data into Seumetry.
 ```{r prepare-catalyst-data}
 # prepare panel dataframe
 panel_cat <- data.frame("fcs_colname" = unname(flowCore::parameters(raw_data[[1]])@data[["name"]]),
@@ -599,25 +605,47 @@ row.names(raw_data[[1]]@exprs) <- paste0("raw_data_1_", 1:nrow(raw_data[[1]]@exp
 row.names(raw_data[[2]]@exprs) <- paste0("raw_data_2_", 1:nrow(raw_data[[2]]@exprs))
 # create seurat + transform (cofactor 5 default)
 seu_cat <- create_seurat(raw_data, panel_cat)
+# to identify beads, normCytof() requires transformed data
+seu_cat <- transform_data(seu_cat, "arcsinh")
 ```
 
 Finally we can perform bead normalisation. It will use the DefaultAssay of 
 the Seurat Object and save normalised raw intensities in "beadnorm" 
-assay. Transformation should be done afterwards. 
+assay. Transformation should be done afterwards. Based on CATALYST documentation,
+parameter k refers to "median window used for bead smoothing" and affects 
+visualizations only.
 ```{r bead-normalisation}
-seu_cat <- bead_norm(seu_cat, k = 50)
+seu_cat <- bead_norm(seu_cat, beads = "dvs", plot_res = TRUE, k = 50)
+```
+
+Furthermore, the returned Seurat Object contains two new metadata columns:  
+- beads: events that likely represent beads.  
+- bead_doublet: events that likely represent beads OR bead-cell doublets.  
+To remove beads and bead doublets from the object, you can use subset.
+```{r bead-removal}
+seu_cat <- subset(seu_cat, subset = bead_doublet == FALSE)
+seu_cat
 ```
 
 ## Integration of third-party tools
 To allow integration with a wide variety of single-cell and cytometry libraries, we 
-implemented a function (convert_seurat) to convert Seurat Objects to SingleCellExperiment,
+implemented a function (convert_seurat) to convert Seurat Objects to SingleCellExperiment, 
 flowFrame, and flowSet objects. These can be used, for example, with batch correction methods 
 (cytoNorm, cyCombine, gaussNorm) or other third-party libraries (diffcyt, CATALYST).  
-As an example, we convert the Seurat Object to a flowFrame object and use a gaussNorm 
-batch correction method from [flowStats](https://github.com/RGLab/flowStats). 
+```{r convert-seurat-fs}
+fs <- convert_seurat(seu, to = "FS", split_by = "sample_id")
+fs
+```
 
+```{r convert-seurat-ff}
+ff <- convert_seurat(seu, to = "FF")
+ff
+```
 
-
+```{r convert-seurat-sce}
+sce <- convert_seurat(seu, to = "SCE")
+sce
+```
 
 ## Median fluorescent intensity
 The Seumetry function "median_expression" can be used similar to Seurat 
@@ -631,12 +659,10 @@ head(sample_mfi)
 
 ## Export of FCS files
 Sometimes it can be useful to view specific clusters in external cytometry Software.
-For this purpose, Seumetry includes a function to export FCS files. This function
-is based on the initial "fcs_fs" object created for loading FCS files.
+For this purpose, Seumetry includes a function to export FCS files. 
 ```{r export-fcs, eval=FALSE}
 # subset Seurat object to specific cluster
 seu_sub <- subset(seu, subset = seurat_clusters == 1)
 # export FCS file containing cells from this cluster
 export_fcs(seu_sub, filename = "cluster_1.fcs", assay = "fcs", slot = "counts")
 ```
-
