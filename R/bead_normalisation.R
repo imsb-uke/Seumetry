@@ -23,7 +23,8 @@ bead_norm <- function(seu,
     sce <- convert_seurat(seu, "SCE", slot = "counts")
     assay(sce, "data") <- counts(convert_seurat(seu, "SCE", slot = "data"))
     # add unused to int_colData
-    int_colData(sce) <- cbind(int_colData(sce), t(as.data.frame(GetAssayData(seu, assay = "unused"))))
+    int_colData(sce) <- cbind(int_colData(sce),
+			      t(as.data.frame(GetAssayData(seu, assay = "unused", layer = "counts"))))
     # fix fcs_colname and antigen rowData columns to match with CATALYST workflow
     colnames(rowData(sce))[1:2] <- c("channel_name", "marker_name")
     # compute CATALYST normCytof
