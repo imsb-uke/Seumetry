@@ -17,7 +17,7 @@ A Docker file and image are supplied with this repository. The image is based on
 You can download the Docker image and run a container:
 ```{bash}
 docker pull ghcr.io/imsb-uke/seumetry
-docker run --name {CONTAINER_NAME} -ti -e DISABLE_AUTH=true -p 8787:8787 -v {PROJECT_DIR}:/home/rstudio/workspace seumetry
+docker run --name {CONTAINER_NAME} -ti -e DISABLE_AUTH=true -p 8787:8787 -v {PROJECT_DIR}:/home/rstudio/workspace ghcr.io/imsb-uke/seumetry
 ```
 
 ## Publication
