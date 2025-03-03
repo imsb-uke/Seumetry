@@ -2,7 +2,7 @@
 #'
 #' This function will use [edgeR::glmFit()] to model number of cells per group given attribute/feature x condition (e.g. seurat_clusters x treatment) and [edgeR::glmLRT()] to make contrast between all conditions. Returns the topTags results corrected for multiple comparison using BH and sorted by pvalue.
 #'
-#' @param cellcounts Matrix with cellcounts per attribute.
+#' @param seu A Seurat Object.
 #' @param attribute Attribute used to calculate differential abundance. Must be present in meta.data of Seurat Object. Default: seurat_clusters.
 #' @param group_by Attribute used to group cells. Default: sample_id.
 #' @param formula Formula for GLM, e.g. "~condition1+condition2+condition3". Conditions must be present as attritubes in seu@meta.data.

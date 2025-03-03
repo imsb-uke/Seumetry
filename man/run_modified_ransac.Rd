@@ -21,13 +21,13 @@ run_modified_ransac(
 
 \item{min_to_fit}{Minimum number of events to sample and fit the linear models. Default: 10.}
 
+\item{max_iteration}{Number of iterations RANSAC should run.}
+
 \item{fit_threshold}{Threshold for residuals (y - predicted) to be counted as inliers.}
 
 \item{data_close}{Minimum data points counted as inliers to consider the model.}
 
 \item{seed}{Set seed for reproducible results. Default: 42.}
-
-\item{max_iterations}{Number of iterations RANSAC should run.}
 }
 \value{
 Best fitting model for formula and data.

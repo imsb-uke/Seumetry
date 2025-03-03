@@ -12,7 +12,7 @@
 #' # identify channel combinations that potentially contain aggregates
 #' problem_channels <- detect_aggregate_channels(seu)
 #' # pheatmap can be used to quickly plot correlation matrices
-#' library(pheatmap)
+#' require(pheatmap)
 #' pheatmap(problem_channels[[1]])
 #' pheatmap(problem_channels[[2]])
 detect_aggregate_channels <- function(seu,
@@ -73,7 +73,7 @@ detect_aggregate_channels <- function(seu,
 #' @param formula Formula for linear model containing dependent and independent variable.
 #' @param data Data to run model on (events that pass the pos_threshold).
 #' @param min_to_fit Minimum number of events to sample and fit the linear models. Default: 10.
-#' @param max_iterations Number of iterations RANSAC should run.
+#' @param max_iteration Number of iterations RANSAC should run.
 #' @param fit_threshold Threshold for residuals (y - predicted) to be counted as inliers.
 #' @param data_close Minimum data points counted as inliers to consider the model.
 #' @param seed Set seed for reproducible results. Default: 42. 

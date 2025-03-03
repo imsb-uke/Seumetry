@@ -1,34 +1,33 @@
 Package: Seumetry
 Title: A toolkit for Flow- and Mass Cytometry data analysis
 Version: 0.1.0
-Authors@R:c(
+Authors@R: c(
     person("Malte", "Borggrewe", , "malte.borggrewe@leibniz-liv.de", role = c("cre", "aut"), comment = c(ORCID = "0000-0001-9644-288X")),
     person("Madeleine", "Bunders", , "madeleine.bunders@leibniz-liv.de", role = c("aut"), comment = c(ORCID = "0000-0002-9538-9500")),
     person("Stefan", "Bonn", , "stefan.bonn@zmnh.uni-hamburg.de", role = c("aut"), comment = c(ORCID = "0000-0003-4366-5662")))
 Description: A toolkit for analysis of flow and mass cytometry data and integration with standard single-cell analysis pipelines.
-License: `use_mit_license()`
+License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.3
+RoxygenNote: 7.3.2
 Depends:
     R (>= 4.0.0),
     Seurat (>= 4.0.0),
     ggplot2 (>= 3.4.0)
 biocViews:
 Imports:
-    Seurat (>= 4.0.0),
     flowCore,
-    flowWorkspace,
-    dplyr,
     ggcyto,
-    ggplot2 (>= 3.4.0),
+    CATALYST,
+    SingleCellExperiment,
+    FlowSOM,
+    Biobase,
+    flowWorkspace,
     edgeR,
     limma,
-    viridis,
     isotree,
     ggrastr,
-    Biobase,
-    SingleCellExperiment
+    viridis
 Suggests: 
     knitr,
     rmarkdown

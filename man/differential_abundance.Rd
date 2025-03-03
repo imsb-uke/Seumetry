@@ -14,6 +14,8 @@ differential_abundance(
 )
 }
 \arguments{
+\item{seu}{A Seurat Object.}
+
 \item{attribute}{Attribute used to calculate differential abundance. Must be present in meta.data of Seurat Object. Default: seurat_clusters.}
 
 \item{group_by}{Attribute used to group cells. Default: sample_id.}
@@ -23,14 +25,12 @@ differential_abundance(
 \item{contrast}{Contrast for coefficients, e.g. c(0,1,-1). To determine how to set the desired contrast, use check_coeff = TRUE.}
 
 \item{check_coeff}{Return coefficients to pick contrasts.}
-
-\item{cellcounts}{Matrix with cellcounts per attribute.}
 }
 \value{
 Data.frame containing topTable results of contrast, corrected for multiple comparison using BH.
 }
 \description{
-This function will use \code{\link[edgeR:glmfit]{edgeR::glmFit()}} to model number of cells per group given attribute/feature x condition (e.g. seurat_clusters x treatment) and \code{\link[edgeR:glmfit]{edgeR::glmLRT()}} to make contrast between all conditions. Returns the topTags results corrected for multiple comparison using BH and sorted by pvalue.
+This function will use \code{\link[edgeR:glmfit]{edgeR::glmFit()}} to model number of cells per group given attribute/feature x condition (e.g. seurat_clusters x treatment) and \code{\link[edgeR:glmLRT]{edgeR::glmLRT()}} to make contrast between all conditions. Returns the topTags results corrected for multiple comparison using BH and sorted by pvalue.
 }
 \examples{
 ' # first check the coefficiencs
