@@ -85,6 +85,8 @@ convert_seurat <- function(seu,
         ff <- flowFrame(t(mtx), an_df)
         # set identifier
         identifier(ff) <- "FlowFrame from Seurat"
+	# set cell IDs
+	row.names(ff@exprs) <- colnames(mtx)
         # return flowframe
         return(ff)
     }

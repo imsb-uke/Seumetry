@@ -35,10 +35,16 @@ With these challenges and possibilities in mind, we developed the R package Seum
 To demonstrate the functionality and workflow of Seumetry, we generated a high-dimensional spectral flow cytometry dataset comprising 39 parameters of human intestinal immune cells. The test dataset consists of immune cells isolated from the intestinal mucosa of 7 adult human donors, including two anatomical layers: epithelium and lamina propria. The data was manually pre-gated on single live cells.
 
 # Setup
+To run the vignette, these tools need to be installed additionally.
+```{r install-libraries, eval=FALSE}
+devtools::install_github('saeyslab/CytoNorm')
+BiocManager::install("EnhancedVolcano")
+install.packages("pheatmap")
+```
+
 Load libraries
 ```{r setup}
-#BiocManager::install("EnhancedVolcano")
-require(pheatmap)
+library(pheatmap)
 library(EnhancedVolcano)
 library(Seumetry)
 library(ggplot2)
@@ -628,6 +634,7 @@ seu_cat
 ```
 
 ## Integration of third-party tools
+### Conversion of Seurat Object
 To allow integration with a wide variety of single-cell and cytometry libraries, we 
 implemented a function (convert_seurat) to convert Seurat Objects to SingleCellExperiment, 
 flowFrame, and flowSet objects. These can be used, for example, with batch correction methods 
@@ -647,6 +654,78 @@ sce <- convert_seurat(seu, to = "SCE")
 sce
 ```
 
+### Example integration: CytoNorm
+Here, we show an example of integrating a third-party tool. We use
+[CytoNorm](https://github.com/saeyslab/CytoNorm) 
+as an example, as it is widely used as a cytometry batch correction method.  
+
+CytoNorm is used for batch correction, but just to showcase the integration with
+Seumetry, we will use it as a donor- or sample normalization method. To this end,
+we will pool a subset of cells from each sample and use it as a reference sample.
+In a second step, we will normalize all samples based on the model trained with
+the reference sample. 
+
+First we create a flowSet of compensated and normalized intensities from a
+subset of cells from each sample. We split the samples by mucosal layer. This
+will be  used as a reference for CytoNorm. We also create a flowSet of all
+samples.
+```{r cn-flowset}
+# subset Seurat object
+seu_sub <- subset(seu, downsample = 1000)
+# create reference FlowSet
+fs_ref <- convert_seurat(seu_sub, to = "FS", split_by = "layer",
+                         assay = "comp", slot = "data")
+# create FlowSet of all samples
+fs <- convert_seurat(seu, to = "FS", split_by = "sample_id",
+                     assay = "comp", slot = "data")
+```
+
+Next, we train the CytoNorm model.
+```{r cn-train}
+# train model
+model <- CytoNorm::CytoNorm.train(files = fs_ref,
+                                  labels = c("IEL", "LPL"),
+                                  channels = row.names(seu),
+                                  transformList = NULL,
+                                  plot = TRUE,
+                                  seed = 42)
+```
+
+Finally, we can normalize all samples based on this model. CytoNorm will write 
+FCS files for each normalized sample.
+```{r cn-normalize}
+# run normalization
+fs_norm <- CytoNorm::CytoNorm.normalize(model = model,
+                             files = fs,
+                             labels = rep(c("IEL", "LPL"), 7),
+                             transformList = NULL,
+                             prefix = "",
+                             transformList.reverse = NULL, 
+                             outputDir = "data/cytonorm")
+```
+
+The resulting normalized FCS files can be loaded, and the intensities can be 
+added to a new assay of the Seurat object and visualized.
+```{r cn-integrate}
+# name of FCS channels was changed during conversion; adjust panel accordingly
+panel_new <- panel
+panel_new$fcs_colname <- panel_new$antigen
+# create Seurat object from flowSet of normalized data
+seu_norm <- create_seurat(fs_norm, panel_new, metadata, derandomize = FALSE)
+# add normalized intensities to other Seurat object
+seu[["cytonorm"]] <- CreateAssayObject(data = GetAssayData(seu_norm))
+```
+
+```{r cn-visualize, fig.width=12, fig.height=5}
+plot1 <- plot_cyto(seu, x = "CD4", assay = "comp", slot = "data",
+                   style = "density", color = "sample_id") +
+  ggtitle("Unnormalized")
+plot2 <- plot_cyto(seu, x = "CD4", assay = "cytonorm", slot = "data",
+                   style = "density", color = "sample_id") +
+  ggtitle("Normalized")
+plot1 + plot2
+```
+
 ## Median fluorescent intensity
 The Seumetry function "median_expression" can be used similar to Seurat 
 "AverageExpression" function, but uses the median instead of the average. This
@@ -658,8 +737,10 @@ head(sample_mfi)
 ```
 
 ## Export of FCS files
-Sometimes it can be useful to view specific clusters in external cytometry Software.
-For this purpose, Seumetry includes a function to export FCS files. 
+Furthermore, sometimes it can be useful to use external software that relies on 
+FCS files. For this purpose, Seumetry includes a function to export FCS files. 
+This can be done, for example, to visualize cells of a specific cluster with 
+external cytometry software. 
 ```{r export-fcs, eval=FALSE}
 # subset Seurat object to specific cluster
 seu_sub <- subset(seu, subset = seurat_clusters == 1)

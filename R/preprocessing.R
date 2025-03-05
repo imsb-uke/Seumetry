@@ -111,13 +111,15 @@ create_seurat <- function(fcs_fs,
   # add panel data to seu@misc slot
   seu@misc <- panel
   # add unused channels to new assay: "unused"
-  seu_unused <- CreateSeuratObject(counts = t(matrix_unused),
-                                   assay = "unused",
-                                   min.cells = 0,
-                                   min.features = 0)
-  seu[["unused"]] <- seu_unused[["unused"]]
+  if(ncol(matrix_unused) > 0) {
+    seu_unused <- CreateSeuratObject(counts = t(matrix_unused),
+                                     assay = "unused",
+                                     min.cells = 0,
+                                     min.features = 0)
+    seu[["unused"]] <- seu_unused[["unused"]]
+  }
   # set idents to sample_id if metadata was provided
-  if(!is.null(metadata)) Idents(seu) = seu$sample_id
+  #if(!is.null(metadata)) Idents(seu) <- seu$sample_id
   # return Seurat object
   return(seu)
 }
