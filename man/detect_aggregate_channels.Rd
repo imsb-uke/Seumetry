@@ -30,7 +30,7 @@ Channels will be subset to positive events only, since aggregates can only be de
 # identify channel combinations that potentially contain aggregates
 problem_channels <- detect_aggregate_channels(seu)
 # pheatmap can be used to quickly plot correlation matrices
-library(pheatmap)
+require(pheatmap)
 pheatmap(problem_channels[[1]])
 pheatmap(problem_channels[[2]])
 }

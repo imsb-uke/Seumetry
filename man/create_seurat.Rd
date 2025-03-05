@@ -4,7 +4,7 @@
 \alias{create_seurat}
 \title{Converts a flowCore flowSet containing multiple flowFrames into a Seurat object}
 \usage{
-create_seurat(fcs_fs, panel, metadata = NULL, ...)
+create_seurat(fcs_fs, panel, metadata = NULL, derandomize = FALSE, ...)
 }
 \arguments{
 \item{fcs_fs}{A flowCore flowSet generated with create_flowset.}
@@ -12,6 +12,8 @@ create_seurat(fcs_fs, panel, metadata = NULL, ...)
 \item{panel}{A panel containing all information for the markers. See vignette for more information on how to generate a panel_df. Function will only use channels indicated in panel$fcs_colnames and will rename channels to panel$antigen.}
 
 \item{metadata}{Data.frame with metadata for each FCS file (rows). Must contain columns "sample_id" and "file_name" and each row must correspond to the flowFrames in the flowSet.}
+
+\item{derandomize}{CyTOF data may contain non-integer values due to normalization. If derandomize is set to TRUE, values will be rounded up to nearest whole number, but only for used channels. Default: FALSE.}
 
 \item{...}{Additional parameters that will be passed on to Seurat::CreateSeuratObject.}
 }

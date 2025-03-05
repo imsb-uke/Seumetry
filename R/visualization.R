@@ -94,7 +94,7 @@ plot_frequency <- function(seu,
 #' Barplot cell numbers
 #'
 #' @param seu Seurat object
-#' @param group Group to plot number of cells. Default: sample_id.
+#' @param group_by Group to plot number of cells. Default: sample_id.
 #' @param return_table Return table with frequencies instead of ggplot2 plot. Default: FALSE.
 #' @return ggplot2 plot, or table if return_table = TRUE
 #' @export

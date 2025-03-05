@@ -2,28 +2,25 @@
 % Please edit documentation in R/utilities.R
 \name{export_fcs}
 \alias{export_fcs}
-\title{Export specific cells to FCS file}
+\title{Exports FCS files from Seurat object.}
 \usage{
-export_fcs(fcs_fs, cell_ids = NULL, filename)
+export_fcs(seu, filename, assay = NULL, slot = "data")
 }
 \arguments{
-\item{fcs_fs}{The flowCore FlowSet that was prepared in the first step during data prep. See \code{\link[=create_flowset]{create_flowset()}}.}
-
-\item{cell_ids}{Name of cells that should be exported (colnames((seu)).}
+\item{seu}{A seurat object.}
 
 \item{filename}{Path and filename where FCS file should be written to.}
-}
-\value{
-If no filename is indicated, this function will return a flowFrame instead of saving a FCS file.
+
+\item{assay}{Assay from Seurat object to be used for conversion. If empty, uses DefaultAssay.}
+
+\item{slot}{Slot from Seurat object to be used for conversion. If empty, uses "data" slot.}
 }
 \description{
-This function uses the initially create flowSet and exports original FCS files based on cell_IDs in Seurat object using \code{\link[flowCore:write.FCS]{flowCore::write.FCS()}}. Can be used to view data with external software such as FlowJo, e.g. to verify cluster annotation.
+This function uses a specified assay and slot from a Seurat object, converts the Object to a flowFrame, and exports the flowFrame as a FCS file. This can be used, for example, to visualize specific clusters or cells in a traditional Flow Cytometry Software.
 }
 \examples{
-# load flowSet
-fcs_fs <- readRDS("fcs_fs.rds")
 # subset Seurat object to specific cluster
 seu_sub <- subset(seu, subset = seurat_clusters == 1)
-# export FCS file containing cells from this cluster
-export_fcs(fcs_fs, cell_ids = colnames(seu_sub), filename = "cluster_1.fcs")
+# export FCS file containing cells from this cluster using raw data
+export_fcs(seu_sub, filename = "cluster_1.fcs", assay = "fcs", slot = "counts")
 }

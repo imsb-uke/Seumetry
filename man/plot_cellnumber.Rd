@@ -9,9 +9,9 @@ plot_cellnumber(seu, group_by = "sample_id", return_table = FALSE)
 \arguments{
 \item{seu}{Seurat object}
 
-\item{return_table}{Return table with frequencies instead of ggplot2 plot. Default: FALSE.}
+\item{group_by}{Group to plot number of cells. Default: sample_id.}
 
-\item{group}{Group to plot number of cells. Default: sample_id.}
+\item{return_table}{Return table with frequencies instead of ggplot2 plot. Default: FALSE.}
 }
 \value{
 ggplot2 plot, or table if return_table = TRUE
