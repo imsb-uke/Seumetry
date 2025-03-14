@@ -1,6 +1,6 @@
 Package: Seumetry
 Title: A toolkit for Flow- and Mass Cytometry data analysis
-Version: 0.1.0
+Version: 0.1.1
 Authors@R: c(
     person("Malte", "Borggrewe", , "malte.borggrewe@leibniz-liv.de", role = c("cre", "aut"), comment = c(ORCID = "0000-0001-9644-288X")),
     person("Madeleine", "Bunders", , "madeleine.bunders@leibniz-liv.de", role = c("aut"), comment = c(ORCID = "0000-0002-9538-9500")),
