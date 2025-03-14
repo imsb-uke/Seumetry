@@ -224,6 +224,7 @@ It is highly recommended to save a non-downsampled Seurat object.
 # set seed for downsampling for reproducibility
 set.seed(42)
 # downsample using Seurats subset function
+Idents(seu) <- seu$sample_id
 seu <- subset(seu, downsample = 20000)
 seu
 # plot cellnumbers per sample
