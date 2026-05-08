@@ -7,7 +7,7 @@
 #' @return Transformed matrix that can be added to Seurat object.
 #' @export
 #' @examples
-#' seu <- SetAssayData(seu, slot = "data", new.data = transform_biexp(matrix, panel))
+#' seu <- SetAssayData(seu, layer = "data", new.data = transform_biexp(matrix, panel))
 transform_biexp <- function(matrix,
                             panel) {
   # function to read settings from panel
@@ -46,7 +46,7 @@ transform_biexp <- function(matrix,
 #' @return Transformed matrix that can be added to Seurat object.
 #' @export
 #' @examples
-#' seu <- SetAssayData(seu, slot = "data", new.data = transform_arcsinh(matrix, panel))
+#' seu <- SetAssayData(seu, layer = "data", new.data = transform_arcsinh(matrix, panel))
 transform_arcsinh <- function(matrix,
                               panel) {
   # function to read settings from panel
@@ -75,24 +75,24 @@ transform_arcsinh <- function(matrix,
 
 #' Wrapper for all transformation functions using Seurat object as input & output
 #'                         
-#' See transformation functions for detail: [transform_arcsinh()], [transform_biexp()]. Input Seurat Object uses "counts" slot from current assay, performs transformation and writes transformed counts into "data" slot from current assay using panel information stored in seu@misc.
+#' See transformation functions for detail: [transform_arcsinh()], [transform_biexp()]. Input Seurat Object uses "counts" layer from current assay, performs transformation and writes transformed counts into "data" layer from current assay using panel information stored in seu@misc.
 #' 
 #' @param seu Seurat object.
 #' @param transformation Indicate which transformation to use (arcsinh, biexp)
-#' @return Seurat object with transformed data in "data" slot of current assay.
+#' @return Seurat object with transformed data in "data" layer of current assay.
 #' @export
 #' @examples
 #' seu <- transform_data(seu, "arcsinh")
 transform_data <- function(seu,
                            transformation) {
   # get untransformed data
-  matrix <- GetAssayData(seu, slot = "counts")
-  # get panel (stored in misc slot by prep_seurat function)
+  matrix <- GetAssayData(seu, layer = "counts")
+  # get panel (stored in misc layer by prep_seurat function)
   panel <- data.frame(seu@misc)
   # transform data
   if(transformation == "arcsinh") transformed <- transform_arcsinh(matrix, panel)
   if(transformation == "biexp") transformed <- transform_biexp(matrix, panel)
   # write into Seurat object
-  seu <- SetAssayData(seu, slot = "data", new.data = transformed)
+  seu <- SetAssayData(seu, layer = "data", new.data = transformed)
   return(seu)
 }

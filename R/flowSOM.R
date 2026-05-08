@@ -4,7 +4,7 @@
 #'
 #' @param seu A seurat object.
 #' @param assay Assay from Seurat object to be used for conversion. If empty, uses DefaultAssay.
-#' @param slot Slot from Seurat object to be used for conversion. If empty, uses "data" slot.
+#' @param layer layer from Seurat object to be used for conversion. If empty, uses "data" layer.
 #' @param features Indicate which features should be used for FlowSOM clustering. Ideally, the features are identical to the features used for dimensionality reduction. Default: NULL, which means that all features are used.
 #' @param metaclusters The number of metaclusters to be computed. Default: 10.
 #' @param xdim The X dimension of the self-organizing map. Default: 10.
@@ -16,7 +16,7 @@
 #' seu <- run_FlowSOM(seu)
 run_FlowSOM <- function(seu,
                         assay = NULL,
-                        slot = "data",
+                        layer = "data",
                         features = NULL,
                         metaclusters = 10,
                         xdim = 10,
@@ -27,7 +27,7 @@ run_FlowSOM <- function(seu,
     # prepare list of features
     if(is.null(features)) features <- row.names(seu)
     # convert to flowframe
-    ff <- convert_seurat(seu, to = "FF", assay = assay, slot = slot)
+    ff <- convert_seurat(seu, to = "FF", assay = assay, layer = layer)
     # convert to flowSOM
     fSOM <- ReadInput(ff)
     # build SOM
