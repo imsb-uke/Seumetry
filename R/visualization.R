@@ -133,7 +133,7 @@ plot_cellnumber <- function(seu,
 #' @param x Which marker to plot on x axis.
 #' @param y Which marker to plot on y axis (only required for style = 2d_density or points)
 #' @param style Choose from: "2d_density", "point", or "density". Default: 2d_density.
-#' @param slot Choose which Seurat slot to use. Default: data (transformed).
+#' @param layer Choose which Seurat layer to use. Default: data (transformed).
 #' @param assay Choose which Seurat assay to use. Default: DefaultAssay(seu).
 #' @param scale Choose which scale to use for x and y axis (linear, log, biexp). Default: linear.
 #' @param limits List of x and y limits. Example: list(x = c(0,5), y = c(0,5)).
@@ -155,7 +155,7 @@ plot_cyto <- function(seu,
                       x,
                       y,
                       style = "2d_density",
-                      slot = "data",
+                      layer = "data",
                       assay = NULL,
                       scale = "linear",
                       limits = NULL,
@@ -170,7 +170,7 @@ plot_cyto <- function(seu,
   # check input
   if(!style %in% c("2d_density", "density", "point")) stop("Indicate a valid style.", call. = FALSE)
   # get dataframe with intensities
-  gg_df = as.data.frame(t(as.matrix(GetAssayData(seu, assay = assay, slot = slot))))
+  gg_df = as.data.frame(t(as.matrix(GetAssayData(seu, assay = assay, layer = layer))))
   # add color to gg data.frame and aesthetics
   aes_list = list()
   if(!is.null(color)) {
