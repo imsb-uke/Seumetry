@@ -1,6 +1,6 @@
 Package: Seumetry
 Title: A toolkit for Flow- and Mass Cytometry data analysis
-Version: 0.1.1
+Version: 0.1.2
 Authors@R: c(
     person("Malte", "Borggrewe", , "hello@malteborggrewe.de", role = c("cre", "aut"), comment = c(ORCID = "0000-0001-9644-288X")),
     person("Madeleine", "Bunders", , "madeleine.bunders@leibniz-liv.de", role = c("aut"), comment = c(ORCID = "0000-0002-9538-9500")),
@@ -16,6 +16,7 @@ Depends:
     ggplot2 (>= 3.4.0)
 biocViews:
 Imports:
+    Matrix,
     flowCore,
     ggcyto,
     CATALYST,
@@ -28,7 +29,12 @@ Imports:
     isotree,
     ggrastr,
     viridis
-Suggests: 
+Suggests:
     knitr,
-    rmarkdown
+    rmarkdown,
+    testthat (>= 3.0.0),
+    CytofRUV,
+    CytoNorm,
+    cyCombine
+Config/testthat/edition: 3
 VignetteBuilder: knitr
