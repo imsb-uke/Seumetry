@@ -102,7 +102,7 @@ create_seurat <- function(fcs_fs,
     meta_df <- NULL
   }
   # create seurat object
-  seu <- CreateSeuratObject(counts = matrix,
+  seu <- CreateSeuratObject(counts = Matrix::Matrix(matrix, sparse = TRUE),
                             assay = "fcs",
                             meta.data = meta_df,
                             min.cells = 0,
@@ -112,7 +112,7 @@ create_seurat <- function(fcs_fs,
   seu@misc <- panel
   # add unused channels to new assay: "unused"
   if(ncol(matrix_unused) > 0) {
-    seu_unused <- CreateSeuratObject(counts = t(matrix_unused),
+    seu_unused <- CreateSeuratObject(counts = Matrix::Matrix(t(matrix_unused), sparse = TRUE),
                                      assay = "unused",
                                      min.cells = 0,
                                      min.features = 0)
