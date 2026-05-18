@@ -6,7 +6,7 @@
 #' @param seu Seurat object used for [create_seurat()].
 #' @param comp_matrix Provide a compensation matrix which is the same for all samples. Names of columns and rows must match channel names indicated in panel data.frame.
 #' @param fcs_matrix Use compensation matrices from FCS files. Can be different for every file. This parameter indicates which compensation matrix to use if there are multiple in the FCS files. Default: 1.
-#' @return Seurat object with new assay "comp", where compensation values were saved in slot "counts".
+#' @return Seurat object with new assay "comp", where compensation values were saved in layer "counts".
 #' @export
 #' @examples
 #' ## Option 1) Use external spillover matrix directly: same compensation for all files
