@@ -185,7 +185,13 @@ detect_aggregates <- function(seu,
     data <- t(GetAssayData(seu))
     # run ransac for all channels and get a list of cell IDs
     potential_aggregates_list <- lapply(1:nrow(aggregate_channels), FUN = function(x) do_ransac(aggregate_channels[x, 1], aggregate_channels[x, 2]))
-    potential_aggregates_df <- data.frame(table(unlist(potential_aggregates_list)))     
+    potential_aggregates_vec <- unlist(potential_aggregates_list)
+    # no channel combination yielded a usable model / potential aggregates
+    if (is.null(potential_aggregates_vec)) {
+      potential_aggregates_df <- data.frame(Var1 = character(0), Freq = integer(0))
+    } else {
+      potential_aggregates_df <- data.frame(table(potential_aggregates_vec))
+    }
     # make new Seurat meta.data with aggregate scores
     seu$aggregate_score <- 0
     seu@meta.data[as.character(potential_aggregates_df[, 1]), "aggregate_score"] <- potential_aggregates_df[, 2]
