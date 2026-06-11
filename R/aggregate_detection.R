@@ -98,6 +98,14 @@ run_modified_ransac <- function(formula,
   x50 <- (max(data[independent_variable]) - min(data[independent_variable])) / 2
   y50 <- (max(data[dependent_variable]) - min(data[dependent_variable])) / 2
   sample_dat <- data[which(data[independent_variable] > x50 & data[dependent_variable] > y50),]
+  # not enough events to draw a sample of size min_to_fit; skip this channel
+  # combination instead of erroring in sample()
+  if (nrow(sample_dat) < min_to_fit) {
+    warning("Not enough events in upper-right quadrant to fit a model (",
+            nrow(sample_dat), " < min_to_fit = ", min_to_fit, "). Skipping.",
+            call. = FALSE)
+    return(NULL)
+  }
   # iterate to generate models
   for (iteration in 1:max_iteration) {
     # take sample from sample data and build model
