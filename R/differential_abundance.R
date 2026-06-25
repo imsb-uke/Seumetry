@@ -8,6 +8,7 @@
 #' @param formula Formula for GLM, e.g. "~condition1+condition2+condition3". Conditions must be present as attritubes in seu@meta.data.
 #' @param contrast Contrast for coefficients, e.g. c(0,1,-1). To determine how to set the desired contrast, use check_coeff = TRUE.
 #' @param check_coeff Return coefficients to pick contrasts.
+#' @param tmm_normalisation Logical. If TRUE, normalisation factors are calculated using the trimmed mean of M-values (TMM) method via [edgeR::calcNormFactors()]. Default: FALSE.
 #' @return Data.frame containing topTable results of contrast, corrected for multiple comparison using BH.
 #' @export
 #' @examples
@@ -21,7 +22,8 @@ differential_abundance <- function(seu,
                                    group_by = "sample_id",
                                    formula,
                                    contrast,
-                                   check_coeff = FALSE) {
+                                   check_coeff = FALSE,
+                                   tmm_normalisation = FALSE) {
   # create matrix with cellcounts
   cellcounts <- as.matrix(table(seu@meta.data[, attribute], seu@meta.data[, group_by]))
   # create sample-level metadata
@@ -29,7 +31,13 @@ differential_abundance <- function(seu,
   # make model matrix
   model <- model.matrix(formula, data = metadata)
   # dge analysis
-  dge <- edgeR::DGEList(counts = cellcounts, lib.size = colSums(cellcounts))
+  if(isTRUE(tmm_normalisation)) {
+    # calculate TMM normalisation factors
+    norm_factors <- edgeR::calcNormFactors(cellcounts, method = "TMM")
+    dge <- edgeR::DGEList(counts = cellcounts, norm.factors = norm_factors, lib.size = colSums(cellcounts))
+  } else {
+    dge <- edgeR::DGEList(counts = cellcounts, lib.size = colSums(cellcounts))
+  }
   dge <- edgeR::estimateDisp(dge, model, trend.method = "none")
   fit <- edgeR::glmFit(dge, model)
   # return coefficients to pick contrast
