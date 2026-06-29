@@ -13,7 +13,7 @@
 #' @export
 #' @examples
 #'' # first check the coefficiencs
-#' differential_abundance(seu, attribute = "seurat_clusters", group_by = "sample_id", formula = as.formula("~0+condition"), check_coef = TRUE)
+#' differential_abundance(seu, attribute = "seurat_clusters", group_by = "sample_id", formula = as.formula("~0+condition"), check_coeff = TRUE)
 #' '# calculate differential abundance
 #' res <- differential_abundance(seu, attribute = "seurat_clusters", group_by = "sample_id", formula = as.formula("~0+condition"), contrast = c(1, -1))
 #' res
