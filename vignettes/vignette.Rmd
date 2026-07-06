@@ -13,13 +13,12 @@ knitr::opts_chunk$set(
   tidy = TRUE,
   message = FALSE,
   warning = FALSE,
-  error = TRUE
+  error = FALSE
 )
-getwd()
 ```
 
 # Introduction
-Advances in flow and mass cytometry now enable the simultaneous measurement of more than 50 parameters per cell in millions of cells per sample. This high dimensional data poses new demands to existing analysis techniques. Conventional gating, until now the gold standard for cytometry data analysis, faces challenges in scaling for the application of high-dimensional cytometry data. Issues with conventional gating strategies include inefficiency, subjectivity, and a significant risk of missing unknown or minor cell populations. Hence, computational methods for unbiased analysis of high-dimensional cytometry data analysis are required.  
+Advances in flow and mass cytometry now enable the simultaneous measurement of more than 50 parameters per cell in millions of cells per sample. This high-dimensional data poses new demands on existing analysis techniques. Conventional gating, until now the gold standard for cytometry data analysis, faces challenges in scaling to high-dimensional cytometry data. Issues with conventional gating strategies include inefficiency, subjectivity, and a significant risk of missing unknown or minor cell populations. Hence, computational methods for the unbiased analysis of high-dimensional cytometry data are required.  
 Several computational tools for cytometry data analysis are available, primarily designed for the R programming language. Examples include
 [CATALYST](https://bioconductor.org/packages/release/bioc/html/CATALYST.html) / 
 [CyTOF workflow](https://bioconductor.org/packages/release/workflows/html/cytofWorkflow.html),
@@ -32,21 +31,22 @@ Whereas high-dimensional cytometry data analysis methods are less established, a
 With these challenges and possibilities in mind, we developed the R package Seumetry, a flow and mass cytometry analysis framework that offers state-of-the-art analysis options across the whole data life cycle. Seumetry includes a broad range of cytometry-specific algorithms for data handling, while it seamlessly integrates with Seurat, providing access to the latest scRNAseq analysis options.  
 
 # Description of data
-To demonstrate the functionality and workflow of Seumetry, we generated a high-dimensional spectral flow cytometry dataset comprising 39 parameters of human intestinal immune cells. The test dataset consists of immune cells isolated from the intestinal mucosa of 7 adult human donors, including two anatomical layers: epithelium and lamina propria. The data was manually pre-gated on single live cells.
+To demonstrate the functionality and workflow of Seumetry, we generated a high-dimensional spectral flow cytometry dataset comprising 39 parameters of human intestinal immune cells. The test dataset consists of immune cells isolated from the intestinal mucosa of 7 adult human donors, including two anatomical layers: epithelium and lamina propria. The data was manually pre-gated on single live cells. For spectral flow cytometry, the raw recordings are spectrally unmixed in the acquisition software before export. Seumetry works on these unmixed intensities and does not perform the unmixing itself.
 
 # Setup
 To run the vignette, these tools need to be installed additionally.
 ```{r install-libraries, eval=FALSE}
-devtools::install_github('saeyslab/CytoNorm')
+devtools::install_github("saeyslab/CytoNorm")
+devtools::install_github("biosurf/cyCombine")
 BiocManager::install("EnhancedVolcano")
 install.packages("pheatmap")
 ```
 
 Load libraries
 ```{r setup}
+library(Seumetry)
 library(pheatmap)
 library(EnhancedVolcano)
-library(Seumetry)
 library(ggplot2)
 library(dplyr)
 ```
@@ -93,7 +93,7 @@ set_theme <- list(theme_linedraw(),
 
 # Metadata and panel
 Metadata and panel are data.frames required by Seumetry for loading FCS files,
-creating a Seurat object, and preprocess the data.
+creating a Seurat object, and preprocessing the data.
 ```{r load-meta-panel}
 metadata <- read.csv("data/metadata.csv")
 panel <- read.csv("data/panel.csv")
@@ -117,6 +117,7 @@ head(panel)
 FCS files are loaded based on *.fcs files in the folder and on "file_name" column 
 in metadata data.frame.  
 Each cell will receive a unique cell ID based on sample_id provided in metadata.
+Under the hood, `create_flowset()` wraps `flowCore::read.flowSet()`.
 ```{r flowset}
 fcs_fs <- create_flowset("data/fcs", metadata)
 fcs_fs
@@ -126,9 +127,9 @@ It is highly recommended to save the "fcs_fs" object.
 
 # Create Seurat object
 All FCS files will be merged and metadata will be added based on sample_id and 
-metadata data.frame. Raw data is saved in Seurat assay "fcs". Only Channels will 
-be kept that are present in panel data.frame and channels will be renamed from 
-"fcs_colname" to "antigen". Channels that were not indicated in panel data.frame
+metadata data.frame. Raw data is saved in Seurat assay "fcs". Only channels
+present in the panel data.frame are kept, and these channels are renamed from
+"fcs_colname" to "antigen". Channels that were not indicated in the panel data.frame
 are stored in Seurat assay "unused". All panel data are stored in seu@misc slot
 for easy access.
 ```{r seurat}
@@ -137,7 +138,7 @@ seu
 ```
 
 Derandomization: For mass cytometry data, it might be desired to derandomize data, which
-will round intensity values up to then nearest whole number
+will round intensity values up to the nearest whole number
 (see https://biosurf.org/cytof_data_scientist.html#34_Data_transformations). 
 This is implemented in the create_seurat function by setting derandomize to TRUE.
 
@@ -147,14 +148,18 @@ plot_cellnumber(seu)
 ```
 
 # Preprocessing
-## Bead normalisation
+## Bead normalization
 For mass cytometry data, bead normalization may be required. This vignette uses
 a flow cytometry test dataset, so bead normalization is not applied. Please refer
 to section "Other features" for a description of bead normalization implementation.
 
 ## Compensation
-Compensation is based on spillover matrices that can be provided within the FCS 
-file or as a data.frame.  
+Compensation is based on spillover matrices that can be provided within the FCS
+file or as a data.frame.
+For spectral flow cytometry, the data is already unmixed by the acquisition software.
+An additional compensation can still be applied in Seumetry to correct residual spillover
+between detectors, which is what we do below. This is not always necessary, so the step
+can be skipped when the unmixed data already looks clean.
 
 There are different options how to supply the matrix. For details see compensate_data 
 function documentation. Here, we use option 3.  
@@ -165,7 +170,7 @@ individual FCS files, thus can be different for each file.
 
 The compensate_data function will use flowCore::compensate() to compensate the raw 
 values and write a new assay into the Seurat object called "comp". The compensated 
-data are saved in "counts" slot.  
+data are saved in "counts" layer.  
 Warning: if multiple spillover matrices are present in FCS files, use the correct one!  
 
 Here, we use option 3 to compensate the data.
@@ -179,36 +184,47 @@ seu <- compensate_data(fcs_fs, seu, fcs_matrix = 3)
 ```{r plot-compensation}
 # Check that compensation worked.  
 plot1 <- plot_cyto(seu, x = "IgD", y = "CD3", assay = "fcs",
-                   slot = "counts", scale = "log", rasterize = TRUE) +
+                   layer = "counts", scale = "log", rasterize = TRUE) +
   ggtitle("Uncompensated")
 plot2 <- plot_cyto(seu, x = "IgD", y = "CD3", assay = "comp",
-                   slot = "counts", scale = "log", rasterize = TRUE) +
+                   layer = "counts", scale = "log", rasterize = TRUE) +
   ggtitle("Compensated")
 plot1 + plot2
 ```
 
 ## Transformation
-The following transformations are possible: arcsinh and biexp.  
+The following transformations are possible: arcsinh and biexp. Both stabilize the
+variance and compress high-intensity events so that populations across the full
+dynamic range become well separated. The arcsinh transformation is computed directly
+as `asinh(x / cofactor)`, while the biexponential transformation wraps
+`flowWorkspace::flowjo_biexp()`.
 
-Transformation is performed on "counts" data of the DefaultAssay of the Seurat 
+Transformation is performed on "counts" data of the DefaultAssay of the Seurat
 object. The DefaultAssay is either "fcs", "beadnorm", or "comp" depending on
-whether bead normalisaton or compensation was performed or not.  
-  
-The transform_data function will return a Seurat object with transformed data 
-written into the "data" slot. 
-  
-Both arcsinh and biexp transformation can and should be used with custom parameters. 
-These parameters should be provided in the panel data.frame, which is stored in 
-seu@misc upon Seurat object creation.
+whether bead normalization or compensation was performed or not.
+
+The transform_data function will return a Seurat object with transformed data
+written into the "data" layer.
+
+Both arcsinh and biexp transformation can and should be used with custom parameters.
+The arcsinh cofactor (and the biexponential parameters) have a strong effect on how well
+populations separate and on the downstream clustering, so they should be set per panel
+rather than left at the default (arcsinh cofactor = 5). Per-marker values are supplied as
+columns in the panel data.frame (`arcsinh_cofactor`, or `biexp_pos`, `biexp_neg` and
+`biexp_width`), which is stored in seu@misc when the Seurat object is created. Markers
+without an entry use the default. It is good practice to check the separation visually on
+biaxial plots after transforming (see below). If you prefer to set the cofactors
+automatically, you can estimate them per marker by variance stabilization, for example
+with the immunoClust package, and enter the resulting values in the panel data.frame.
 ```{r transformation}
 seu <- transform_data(seu, "arcsinh")
 ```
 
 ```{r plot-transformation}
-plot1 <- plot_cyto(seu, x = "CD4", y = "CD3", assay = "fcs", slot = "counts",
+plot1 <- plot_cyto(seu, x = "CD4", y = "CD3", assay = "comp", layer = "counts",
                    scale = "log", rasterize = TRUE) +
     ggtitle("Untransformed")
-plot2 <- plot_cyto(seu, x = "CD4", y = "CD3", assay = "comp", slot = "data",
+plot2 <- plot_cyto(seu, x = "CD4", y = "CD3", assay = "comp", layer = "data",
                    rasterize = TRUE) +
     ggtitle("Arcsinh transformation")
 plot1 + plot2
@@ -232,7 +248,7 @@ plot_cellnumber(seu)
 ```
 
 # Quality control
-Cytometry is an inherently noisy technology. There will be events close  to the
+Cytometry is an inherently noisy technology. There will be events close to the
 axis or artefacts due to antibody aggregation. Seumetry provides multiple 
 quality control tools to achieve clean data for downstream analysis.
 
@@ -246,35 +262,38 @@ isolation forest.
 Use a named vector to indicate threshold for each channel. The function can take 
 positive or negative thresholds.
 ```{r man-outlier-before}
-# check each channel to determine if they contain outlier events
-plot_cyto(seu, "CD4", "CD3", style = "2d_density", assay = "comp", slot = "data")
+# example: check a channel pair to determine if it contains outlier events
+plot_cyto(seu, "CD4", "CD3", style = "2d_density", assay = "comp", layer = "data")
 ```
 
 ```{r man-outlier-removal}
 # manually set thresholds based on cyto plots
-thresholds_neg = c("CD3" = -4,
-                   "CD4" = -2)
-thresholds_pos = c("CD3" = 4,
-                   "CD4" = 4.5)
+thresholds_neg <- c("CD3" = -4,
+                    "CD4" = -2)
+thresholds_pos <- c("CD3" = 4,
+                    "CD4" = 4.5)
 # remove values above or below thresholds
-seu_manual = remove_outliers_manual(seu, thresholds_neg)
-seu_manual = remove_outliers_manual(seu_manual, thresholds_pos, negative = FALSE)
+seu_manual <- remove_outliers_manual(seu, thresholds_neg)
+seu_manual <- remove_outliers_manual(seu_manual, thresholds_pos, negative = FALSE)
 ```
 
-```{r man-outerlier-after}
-plot_cyto(seu_manual, "CD4", "CD3", style = "2d_density", assay = "comp", slot = "data")
+```{r man-outlier-after}
+plot_cyto(seu_manual, "CD4", "CD3", style = "2d_density", assay = "comp", layer = "data")
 ```
 
 ### Automatic removal
-Outliers are detected using an isolation forest. In ungated flow cytometry data, 
-this algorithm will mainly remove axis-near events, dead cells, and doublets.  
-The threshold at which score an event is regarded an outlier can be supplied,
-which refers to the approximate depth it takes to isolate an observation. 
-The threshold is usually between 0.6 and 0.8, with an default threshold of 0.7. 
-The lower the threshold, the more cells are labelled as outliers.  
+Outliers are detected using an isolation forest. In ungated flow cytometry data,
+this algorithm mainly removes axis-near events, doublets, and debris. Even when the data
+has been pre-gated on single live cells, as in this dataset, some dying or
+membrane-compromised cells and other artefacts can slip through that gating, and these
+are picked up here.
+The score above which an event is regarded as an outlier can be supplied; it
+refers to the approximate depth it takes to isolate an observation.
+The threshold is usually between 0.6 and 0.8, with a default threshold of 0.7.
+The lower the threshold, the more cells are labeled as outliers.  
   
 The function will save two features for each cell into meta.data of the 
-Seurat Object: 1) the isolation forest score (outlier_score) and whether an 
+Seurat Object: 1) the isolation forest score (outlier_score) and 2) whether an
 event passed the threshold or not (outlier).
 ```{r auto-outlier-detection}
 # identify outliers (default threshold: 0.7)
@@ -282,16 +301,16 @@ seu <- detect_outliers(seu, score_threshold = 0.7)
 ```
 
 ```{r auto-outlier-plots}
-plot1 <- plot_cyto(seu, x = "CD4", y = "CD3", assay = "comp", slot = "data") +
+plot1 <- plot_cyto(seu, x = "CD4", y = "CD3", assay = "comp", layer = "data") +
     ggtitle("Before removal")
-plot2 <- plot_cyto(seu, x = "CD4", y = "CD3", assay = "comp", slot = "data",
+plot2 <- plot_cyto(seu, x = "CD4", y = "CD3", assay = "comp", layer = "data",
                    style = "point", color = "outlier_score") +
     ggtitle("Outlier score")
-plot3 <- plot_cyto(seu, x = "CD4", y = "CD3", assay = "comp", slot = "data",
+plot3 <- plot_cyto(seu, x = "CD4", y = "CD3", assay = "comp", layer = "data",
                    style = "point", color = "outlier") +
     ggtitle("Outlier")
 plot4 <- plot_cyto(subset(seu, subset = outlier == FALSE), x = "CD4", y = "CD3",
-                   assay = "comp", slot = "data") +
+                   assay = "comp", layer = "data") +
     ggtitle("After removal")
 plot1 + plot2 + plot3 + plot4
 ```
@@ -304,7 +323,7 @@ seu <- subset(seu, subset = outlier == FALSE)
 
 
 ## Removal of aggregates
-With high-dimensional Flow cytometry, antibody aggregates can occur. These are 
+With high-dimensional flow cytometry, antibody aggregates can occur. These are 
 usually characterized by highly co-linear events that form diagonal structures in 
 XY plots. This algorithm can identify potentially problematic channel 
 combinations and identify aggregates in these channels.  
@@ -316,11 +335,23 @@ plot2 <- plot_cyto(seu, x = "CXCR3", y = "CD1C")
 plot1 + plot2
 ```
 
-The first step is to identify channel combinations that potentially contain 
-aggregates. This is done by selecting only double positive events (default: events > 1) 
-and running a pearson correlation. The default threshold of labelling a channel 
+The first step is to identify channel combinations that potentially contain
+aggregates. This is done by selecting only double positive events (default: events > 1)
+and running a pearson correlation. The default threshold of labeling a channel
 potentially containing aggregates is pearson R > 0.7. The lower the threshold,
-the more channels are labelled as potentially containing aggregates.  
+the more channels are labeled as potentially containing aggregates.
+
+The Pearson step is intentionally permissive. Its only job is to pick candidate channel
+pairs to inspect in the next (RANSAC) step, and it removes no cells, so the exact
+threshold is not critical. The relevant parameters of `detect_aggregate_channels()` are:
+- `threshold` (Pearson R, default 0.7): lower it if a channel pair you suspect contains
+aggregates is not being flagged; raise it to inspect fewer pairs.
+- `pos_threshold` (default 1): the cutoff separating positive from negative events, since
+aggregates are only detectable among double-positive events. Raise it for channels with
+high background.
+- `percent_cells` (default 0.5%): the minimum fraction of double-positive cells required
+before a pair is flagged, which guards against a high Pearson R driven by only a handful
+of cells.
   
 The function "detect_aggregate_channels" returns a list of 2 matrices and 1 data.frame.  
 - Matrix 1: pearson correlation matrix.  
@@ -351,12 +382,29 @@ rm(plots)
 If a channel combination does not look like it contains aggregates, remove that
 row from the data.frame (problem_channels[[3]]).  
 
-Next, we can detect aggregates in the problematic channels using a modified 
-RANSAC algorithm. Each cell will get an aggregate_score, which is the number 
-of channel combinations in which it was labelled as an aggregate. By default, 
-potential aggregates are only labelled real aggregates if they occur in 2 or more 
+Next, we can detect aggregates in the problematic channels using a modified
+RANSAC algorithm. Each cell will get an aggregate_score, which is the number
+of channel combinations in which it was labeled as an aggregate. By default,
+potential aggregates are only labeled real aggregates if they occur in 2 or more
 channel combinations. The aggregate_score and whether a cell has passed the
 aggregate_score threshold (default >= 2) is stored in meta.data of the Seurat object.
+
+This RANSAC step is where cells are actually flagged. A pair picked up by the permissive
+Pearson screen is not removed at that stage, it is only fitted here. Aggregates show up as
+events lying on a near `x = y` line through the origin, with the slope constrained to
+roughly 0.75 to 1.25, while real cells form the surrounding cloud. This is also why
+genuine biological co-expression, for example in NK cells or activated T cells, does not
+get systematically removed: co-expression gives an elevated but diffuse correlation,
+whereas aggregates fall on a tight, almost proportional line, and only events on that line
+are flagged. The key parameters of `detect_aggregates()` are:
+- `score_threshold` (default >= 2): how many channel pairs must flag a cell before it is
+called an aggregate, and the main precision/recall dial. Raise it for fewer false
+positives (more conservative); lower it to remove aggregates more aggressively.
+- `fit_threshold`: the residual cutoff for counting an event as lying on the aggregate
+axis; tighten it (smaller value) to require stricter collinearity.
+- `min_to_fit` / `max_iteration` (passed to the RANSAC fit): if many channel pairs are
+skipped because no model could be fitted, the function suggests reducing `min_to_fit` or
+increasing `max_iteration`.
 ```{r aggregate-detection}
 seu <- detect_aggregates(seu, problem_channels[[3]])
 ```
@@ -392,8 +440,10 @@ seu <- subset(seu, subset = aggregate == FALSE)
 ```
 
 It is possible that some aggregates still remain. In that case it is advisable to
-fine tune the parameters of the aggregate_channels function. Alternatively,
-remaining artefacts may be removed by detecting outliers again using the
+fine tune the parameters described above. The most common adjustments are lowering the
+Pearson `threshold` in `detect_aggregate_channels()` to screen more channel pairs, or
+lowering `score_threshold` in `detect_aggregates()` to label aggregates more aggressively.
+Alternatively, remaining artefacts may be removed by detecting outliers again using the
 isolation forest.
 
 # Dimensionality reduction & clustering
@@ -409,24 +459,24 @@ select features for PCA that distinguish expected cell subsets, e.g. CD3, CD4,
 and CD8 if working with T cells.  
 
 Furthermore, input data and data processing can be adjusted:  
-- No centering (data resembles raw intensities more closely)
-- No scaling (preserves relationship of absolute marker intensities)
+- No centering (data resembles raw intensities more closely)  
+- No scaling (preserves relationship of absolute marker intensities)  
 - Use (selected) features directly as input
 
-Here, all features are used for scaling, centering and PCA. For UMAP 10 PCs are used.
+Here, all features are used for scaling, centering and PCA. For UMAP, 10 PCs are used.
 ```{r umap-clustering, error=FALSE, results='hide'}
 # scale data
-seu <- Seurat::ScaleData(seu, features = row.names(seu), scale = TRUE, center = TRUE)
+seu <- Seurat::ScaleData(seu, features = row.names(seu), do.scale = TRUE, do.center = TRUE)
 # run PCA for all features
 seu <- Seurat::RunPCA(seu, features = row.names(seu), approx = FALSE)
-# run UMAP using all PCs
+# run UMAP using 10 PCs
 seu <- Seurat::RunUMAP(seu, dims = 1:10)
 ```
 
 Integration of multiple datasets or batch correction methods based on PCA such
 as CCA integration or harmony can also be used (not done in this tutorial).
 
-All Seurat visualisations are available. 
+All Seurat visualizations are available. 
 For more detail, see https://satijalab.org/seurat/
 ```{r seurat-dimplot, fig.width=10, fig.height=4}
 plot1 <- Seurat::DimPlot(seu, group.by = "sample_id") + set_theme
@@ -455,7 +505,18 @@ seu <- Seurat::FindClusters(seu, resolution = 0.5)
 Seurat::DimPlot(seu, group.by = "seurat_clusters") + set_theme
 ```
 
-We also implemented a FlowSOM and metaclustering via FlowSOM R package
+The `resolution` argument of `Seurat::FindClusters` controls how fine-grained the
+clustering is, with higher values giving more clusters. There is no single correct value.
+We recommend clustering at a somewhat higher resolution than you think you need, so that
+small or rare populations are resolved instead of being absorbed into larger ones.
+Clusters that split a single biological population can then be merged afterwards based on
+their marker expression (see the cluster-marker step below), for example by relabeling
+them into one cell type. This overclustering-then-merging strategy is also recommended by
+FlowSOM metaclustering and the CATALYST / CyTOF workflow (`cytofWorkflow`, via
+`CATALYST::mergeClusters`).
+
+We also implemented FlowSOM and metaclustering: `run_FlowSOM()` wraps
+`FlowSOM::BuildSOM()` and `FlowSOM::metaClustering_consensus()`.
 ```{r flowsom-clustering, fig.width=5, fig.height=5}
 # run flowSOM and metaclustering
 seu <- run_FlowSOM(seu, metaclusters = 10, xdim = 10, ydim = 10)
@@ -464,14 +525,14 @@ Seurat::DimPlot(seu, group.by = "SOM_metacl") + set_theme
 ```
 
 ## Cluster markers
-Not only visualisations, but also other Seurat features are fully functional. 
+Not only visualizations, but also other Seurat features are fully functional. 
 For example, FindAllMarkers can be used to help annotate clusters.
 ```{r seurat-markers, error=FALSE, results='hide'}
-markers <- Seurat::FindAllMarkers(seu, group.by = "seurat_clusters", only.pos = TRUE)
+markers <- Seurat::FindAllMarkers(seu, only.pos = TRUE)
 ```
 
 ```{r seurat-dotplot, fig.width=11, fig.height=4}
-top5 = markers %>% group_by(cluster) %>% top_n(n = 5, wt = avg_log2FC)
+top5 <- markers %>% group_by(cluster) %>% slice_max(avg_log2FC, n = 5)
 Seurat::DotPlot(seu, unique(top5$gene), assay = "comp") + 
   scale_color_gradientn(colors = gradient_colors) +
   theme_linedraw() + theme(panel.grid.major = element_blank(),
@@ -480,13 +541,13 @@ Seurat::DotPlot(seu, unique(top5$gene), assay = "comp") +
 ```
 
 # Differential abundance
-Differential abundance (DA) analysis is implemented in the Seumetry workflow 
-based on the edgeR package. DA is done using a generalized linear model (GLM) to 
-model number of cells per group given attribute/feature x condition 
-(e.g. seurat_clusters x treatment) and a likelihood ratio rest (LRT) to make a 
-contrast between all conditions.  
+Differential abundance (DA) analysis is provided by the Seumetry function
+`differential_abundance()`, which wraps the edgeR package. DA is done using a
+generalized linear model (GLM, `edgeR::glmFit()`) to model number of cells per group
+given attribute/feature x condition (e.g. seurat_clusters x treatment) and a likelihood
+ratio test (LRT, `edgeR::glmLRT()`) to make a contrast between all conditions.
 
-Using the function with "check_coef = TRUE" will return all coefficients to 
+Using the function with "check_coeff = TRUE" will return all coefficients to
 design the proper contrast for the DA analysis.
 ```{r da-setup}
 # first check the contrasts
@@ -494,7 +555,7 @@ differential_abundance(seu,
                        attribute = "seurat_clusters",
                        group_by = "sample_id",
                        formula = as.formula("~0+layer"),
-                       check_coef = TRUE)
+                       check_coeff = TRUE)
 ```
 
 Here, we compare IEL vs LPL using a contrast of c(1, -1).
@@ -528,9 +589,10 @@ EnhancedVolcano::EnhancedVolcano(da_res,
 In addition to Seurat "FindMarkers" function, Seumetry also includes a feature 
 to find differential expression (DE) of markers based on a pseudobulk analysis. 
 To this end, the median fluorescent intensity is calculated using the Seumetry 
-function "median_expression". The DE analysis is based on the limma package and
-a linear model is fit followed by empirical Bayes statistics for differential
-expression (eBayes).
+function "median_expression". The DE analysis is provided by the Seumetry function
+`DE_pseudobulk()`, which wraps the limma package: a linear model is fit
+(`limma::lmFit()`) followed by empirical Bayes statistics for differential expression
+(`limma::eBayes()`).
 ```{r de-analysis}
 de_res <- DE_pseudobulk(seu,
                         fixed_vars = "layer",
@@ -574,9 +636,9 @@ plot_pca(seu, group_by = "sample_id", color = "layer")
 ```
 
 ## Frequency plots
-Seumetry includes a function to visualise the frequency or proportion of cells
+Seumetry includes a function to visualize the frequency or proportion of cells
 based on metadata columns. For example, it can be useful to assess whether 
-the frequency of clusters is stable across different samples or differents between
+the frequency of clusters is stable across different samples or differs between
 conditions.
 ```{r frequency-plot}
 plot_frequency(seu, "seurat_clusters", "sample_id")
@@ -589,12 +651,12 @@ plot_cellnumber(seu, "sample_id")
 ```
 
 # Other features
-## Bead normalisation
-The test dataset used throughout this vignette is a flow cytometry dataset,
-bead normalisation is only available for mass cytometry data. Here, we implemented 
-bead normalisation by using a wrapper function for the normCytof() 
-function of the [CATALYST](https://github.com/HelenaLC/CATALYST) package.
-To showcase the bead normalisation implementation in Seumetry, we use 
+## Bead normalization
+The test dataset used throughout this vignette is a flow cytometry dataset, and
+bead normalization is only available for mass cytometry data. Here, we implemented
+bead normalization in the Seumetry function `bead_norm()`, which wraps
+`CATALYST::normCytof()` from the [CATALYST](https://github.com/HelenaLC/CATALYST) package.
+To showcase the bead normalization implementation in Seumetry, we use 
 the raw_data provided by CATALYST.
 ```{r get-data}
 library(CATALYST)
@@ -616,12 +678,12 @@ seu_cat <- create_seurat(raw_data, panel_cat)
 seu_cat <- transform_data(seu_cat, "arcsinh")
 ```
 
-Finally we can perform bead normalisation. It will use the DefaultAssay of 
-the Seurat Object and save normalised raw intensities in "beadnorm" 
+Finally we can perform bead normalization. It will use the DefaultAssay of 
+the Seurat Object and save normalized raw intensities in "beadnorm" 
 assay. Transformation should be done afterwards. Based on CATALYST documentation,
 parameter k refers to "median window used for bead smoothing" and affects 
 visualizations only.
-```{r bead-normalisation}
+```{r bead-normalization}
 seu_cat <- bead_norm(seu_cat, beads = "dvs", plot_res = TRUE, k = 50)
 ```
 
@@ -639,7 +701,7 @@ seu_cat
 To allow integration with a wide variety of single-cell and cytometry libraries, we 
 implemented a function (convert_seurat) to convert Seurat Objects to SingleCellExperiment, 
 flowFrame, and flowSet objects. These can be used, for example, with batch correction methods 
-(cytoNorm, cyCombine, gaussNorm) or other third-party libraries (diffcyt, CATALYST).  
+(CytoNorm, cyCombine, gaussNorm) or other third-party libraries (diffcyt, CATALYST).
 ```{r convert-seurat-fs}
 fs <- convert_seurat(seu, to = "FS", split_by = "sample_id")
 fs
@@ -668,17 +730,17 @@ the reference sample.
 
 First we create a flowSet of compensated and normalized intensities from a
 subset of cells from each sample. We split the samples by mucosal layer. This
-will be  used as a reference for CytoNorm. We also create a flowSet of all
+will be used as a reference for CytoNorm. We also create a flowSet of all
 samples.
 ```{r cn-flowset}
 # subset Seurat object
 seu_sub <- subset(seu, downsample = 1000)
 # create reference FlowSet
 fs_ref <- convert_seurat(seu_sub, to = "FS", split_by = "layer",
-                         assay = "comp", slot = "data")
+                         assay = "comp", layer = "data")
 # create FlowSet of all samples
 fs <- convert_seurat(seu, to = "FS", split_by = "sample_id",
-                     assay = "comp", slot = "data")
+                     assay = "comp", layer = "data")
 ```
 
 Next, we train the CytoNorm model.
@@ -695,10 +757,12 @@ model <- CytoNorm::CytoNorm.train(files = fs_ref,
 Finally, we can normalize all samples based on this model. CytoNorm will write 
 FCS files for each normalized sample.
 ```{r cn-normalize}
+# match each sample's layer in the order of the flowSet frames
+labels <- metadata$layer[match(flowCore::sampleNames(fs), metadata$sample_id)]
 # run normalization
 fs_norm <- CytoNorm::CytoNorm.normalize(model = model,
                              files = fs,
-                             labels = rep(c("IEL", "LPL"), 7),
+                             labels = labels,
                              transformList = NULL,
                              prefix = "",
                              transformList.reverse = NULL, 
@@ -718,12 +782,51 @@ seu[["cytonorm"]] <- CreateAssayObject(data = GetAssayData(seu_norm))
 ```
 
 ```{r cn-visualize, fig.width=12, fig.height=5}
-plot1 <- plot_cyto(seu, x = "CD4", assay = "comp", slot = "data",
+plot1 <- plot_cyto(seu, x = "CD4", assay = "comp", layer = "data",
                    style = "density", color = "sample_id") +
   ggtitle("Unnormalized")
-plot2 <- plot_cyto(seu, x = "CD4", assay = "cytonorm", slot = "data",
+plot2 <- plot_cyto(seu, x = "CD4", assay = "cytonorm", layer = "data",
                    style = "density", color = "sample_id") +
   ggtitle("Normalized")
+plot1 + plot2
+```
+
+### Example integration: cyCombine
+Another widely used cytometry batch correction method is
+[cyCombine](https://github.com/biosurf/cyCombine), which groups cells with a
+self-organizing map and corrects each group with ComBat. cyCombine's `batch_correct()`
+function can operate directly on a Seurat object, so a Seumetry object can be passed
+without any conversion. It only requires a "batch" column in the meta.data and corrects
+the transformed intensities in the "data" layer of the active assay. We pass it the
+compensated assay ("comp") on its own (via `DietSeurat`), so the correction is applied to
+those markers.
+
+As with the CytoNorm example above, our test dataset contains no technical
+batches, so to showcase the integration we treat each donor (patient_id) as a
+"batch" while preserving the biological mucosal layer (IEL vs LPL) as a covariate.
+```{r cc-correct}
+# cyCombine requires a "batch" column in the meta.data (factor for plotting)
+seu$batch <- factor(seu$patient_id)
+# hand cyCombine a clean object with only the compensated, arcsinh-transformed assay ("comp")
+seu_input <- DietSeurat(seu, assays = "comp")
+seu_cc <- cyCombine::batch_correct(seu_input,
+                                   covar = "layer",
+                                   markers = row.names(seu_input),
+                                   norm_method = "scale",
+                                   seed = 42)
+# add corrected intensities to a new assay of the original object
+seu[["cycombine"]] <- seu_cc[["cyCombine"]]
+```
+
+The corrected intensities can be visualized like any other assay. Here, the
+donor-to-donor spread in CD4 is reduced after correction.
+```{r cc-visualize, fig.width=12, fig.height=5}
+plot1 <- plot_cyto(seu, x = "CD4", assay = "comp", layer = "data",
+                   style = "density", color = "batch") +
+  ggtitle("Uncorrected")
+plot2 <- plot_cyto(seu, x = "CD4", assay = "cycombine", layer = "data",
+                   style = "density", color = "batch") +
+  ggtitle("Batch corrected")
 plot1 + plot2
 ```
 
@@ -739,12 +842,12 @@ head(sample_mfi)
 
 ## Export of FCS files
 Furthermore, sometimes it can be useful to use external software that relies on 
-FCS files. For this purpose, Seumetry includes a function to export FCS files. 
-This can be done, for example, to visualize cells of a specific cluster with 
-external cytometry software. 
+FCS files. For this purpose, Seumetry includes the `export_fcs()` function, which wraps
+`flowCore::write.FCS()`. This can be done, for example, to visualize cells of a specific
+cluster with external cytometry software.
 ```{r export-fcs, eval=FALSE}
 # subset Seurat object to specific cluster
 seu_sub <- subset(seu, subset = seurat_clusters == 1)
 # export FCS file containing cells from this cluster
-export_fcs(seu_sub, filename = "cluster_1.fcs", assay = "fcs", slot = "counts")
+export_fcs(seu_sub, filename = "cluster_1.fcs", assay = "fcs", layer = "counts")
 ```
