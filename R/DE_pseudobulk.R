@@ -17,12 +17,23 @@ DE_pseudobulk <- function(seu,
                           fixed_vars,
                           contrast,
                           min.cells = 3) {
+    # validate inputs
+    if(!inherits(seu, "Seurat")) stop("seu must be a Seurat object.", call. = FALSE)
+    if(missing(fixed_vars)) stop("fixed_vars must be provided.", call. = FALSE)
+    if(missing(contrast)) stop("contrast must be provided.", call. = FALSE)
+    if(!group_by %in% colnames(seu@meta.data))
+        stop("group_by column '", group_by, "' not found in seu@meta.data.", call. = FALSE)
+    if(!all(fixed_vars %in% colnames(seu@meta.data)))
+        stop("The following fixed_vars are not found in seu@meta.data: ",
+             paste(setdiff(fixed_vars, colnames(seu@meta.data)), collapse = ", "), call. = FALSE)
     # get median expression per sample
     counts <- median_expression(seu, group_by = group_by)
     # create metadata data.frame based on seu@meta.data
     metadata <- seu@meta.data[match(colnames(counts), seu@meta.data[, group_by]),]
     # filter out samples with low number of cells
     keep <- names(which(table(seu@meta.data[, group_by]) >= min.cells))
+    if(length(keep) < 2)
+        stop("Fewer than 2 groups have at least min.cells (", min.cells, ") cells. Lower min.cells or check group_by.", call. = FALSE)
     counts <- counts[,keep]
     metadata <- metadata[which(metadata[[group_by]] %in% keep),]
     # create formula

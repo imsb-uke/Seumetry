@@ -86,6 +86,17 @@ run_modified_ransac <- function(formula,
                                 fit_threshold = 0.5,
                                 data_close = 10,
                                 seed = 42) {
+  # validate inputs
+  if(!inherits(formula, "formula")) stop("formula must be a formula object, e.g. y ~ x.", call. = FALSE)
+  if(!is.data.frame(data) && !is.matrix(data)) stop("data must be a data.frame or matrix.", call. = FALSE)
+  vars <- all.vars(formula)
+  if(length(vars) != 2) stop("formula must contain exactly one dependent and one independent variable.", call. = FALSE)
+  if(!all(vars %in% colnames(data)))
+      stop("The following formula variables are not found in data: ",
+           paste(setdiff(vars, colnames(data)), collapse = ", "), call. = FALSE)
+  if(!is.numeric(min_to_fit) || min_to_fit < 2) stop("min_to_fit must be a numeric value >= 2.", call. = FALSE)
+  if(!is.numeric(max_iteration) || max_iteration < 1) stop("max_iteration must be a positive numeric value.", call. = FALSE)
+  if(!is.numeric(data_close) || data_close < 0) stop("data_close must be a non-negative numeric value.", call. = FALSE)
   # set seet
   set.seed(seed)
   # initial fit and error
@@ -157,6 +168,16 @@ detect_aggregates <- function(seu,
                               fit_threshold = 0.25,
                               pos_threshold = 1,
                               ...) {
+    # validate inputs
+    if(!inherits(seu, "Seurat")) stop("seu must be a Seurat object.", call. = FALSE)
+    if(!is.data.frame(aggregate_channels) || ncol(aggregate_channels) < 2)
+        stop("aggregate_channels must be a data.frame with at least 2 columns (e.g. detect_aggregate_channels()[[3]]).", call. = FALSE)
+    if(nrow(aggregate_channels) < 1)
+        stop("aggregate_channels has no rows; no channel combinations to process.", call. = FALSE)
+    channels <- unique(c(aggregate_channels[, 1], aggregate_channels[, 2]))
+    if(!all(channels %in% row.names(GetAssayData(seu))))
+        stop("The following channels are not found in the Seurat object: ",
+             paste(setdiff(channels, row.names(GetAssayData(seu))), collapse = ", "), call. = FALSE)
     # function for correlation computation
     do_ransac <- function(x, y) {
         # get data.frame of only 2 markers
@@ -184,7 +205,7 @@ detect_aggregates <- function(seu,
     # get data from Seurat Object
     data <- t(GetAssayData(seu))
     # run ransac for all channels and get a list of cell IDs
-    potential_aggregates_list <- lapply(1:nrow(aggregate_channels), FUN = function(x) do_ransac(aggregate_channels[x, 1], aggregate_channels[x, 2]))
+    potential_aggregates_list <- lapply(seq_len(nrow(aggregate_channels)), FUN = function(x) do_ransac(aggregate_channels[x, 1], aggregate_channels[x, 2]))
     potential_aggregates_vec <- unlist(potential_aggregates_list)
     # no channel combination yielded a usable model / potential aggregates
     if (is.null(potential_aggregates_vec)) {

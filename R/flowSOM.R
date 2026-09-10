@@ -22,6 +22,20 @@ run_FlowSOM <- function(seu,
                         xdim = 10,
                         ydim = 10,
                         ...) {
+    # validate inputs
+    if(!inherits(seu, "Seurat")) stop("seu must be a Seurat object.", call. = FALSE)
+    if(!is.null(assay) && !assay %in% Assays(seu))
+        stop("Assay '", assay, "' not found in Seurat object. Available assays: ",
+             paste(Assays(seu), collapse = ", "), call. = FALSE)
+    if(!is.null(features) && !all(features %in% row.names(seu)))
+        stop("The following features are not present in the Seurat object: ",
+             paste(setdiff(features, row.names(seu)), collapse = ", "), call. = FALSE)
+    if(!is.numeric(metaclusters) || length(metaclusters) != 1 || metaclusters < 1 || metaclusters != round(metaclusters))
+        stop("metaclusters must be a single positive whole number.", call. = FALSE)
+    if(!is.numeric(xdim) || length(xdim) != 1 || xdim < 1 || xdim != round(xdim))
+        stop("xdim must be a single positive whole number.", call. = FALSE)
+    if(!is.numeric(ydim) || length(ydim) != 1 || ydim < 1 || ydim != round(ydim))
+        stop("ydim must be a single positive whole number.", call. = FALSE)
     # set assay
     if(is.null(assay)) assay <- DefaultAssay(seu)
     # prepare list of features

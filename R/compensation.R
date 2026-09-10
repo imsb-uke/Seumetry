@@ -25,6 +25,15 @@ compensate_data <- function(fcs_fs,
                             seu,
                             comp_matrix = NULL,
                             fcs_matrix = 1) {
+  # validate inputs
+  if(!methods::is(fcs_fs, "flowSet")) stop("fcs_fs must be a flowSet.", call. = FALSE)
+  if(!inherits(seu, "Seurat")) stop("seu must be a Seurat object.", call. = FALSE)
+  if(!is.null(comp_matrix)) {
+      if(!is.matrix(comp_matrix) && !is.data.frame(comp_matrix))
+          stop("comp_matrix must be a matrix or data.frame.", call. = FALSE)
+      if(!any(colnames(comp_matrix) %in% seu@misc$fcs_colname))
+          stop("None of the colnames of comp_matrix match channel names in the panel (seu@misc$fcs_colname).", call. = FALSE)
+  }
   # create compensation object using a spillover matrix directly
   if(!is.null(comp_matrix)) {
       comp <- compensation(comp_matrix)
@@ -42,6 +51,8 @@ compensate_data <- function(fcs_fs,
   matrix <- fsApply(fs_comp, exprs)
   # subset to only contain channels present in panel
   matrix <- matrix[, colnames(matrix) %in% seu@misc$fcs_colname]
+  if(ncol(matrix) < 1)
+      stop("No channels in fcs_fs match the panel (seu@misc$fcs_colname). Check that channel names overlap.", call. = FALSE)
   # rename channels to antigen in panel
   colnames(matrix) <- seu@misc$antigen[match(colnames(matrix), seu@misc$fcs_colname)]
   # only keep cells present in original Seurat object
