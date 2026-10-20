@@ -25,4 +25,4 @@ Seumetry is published in Bioinformatics Journal: [https://www.biorxiv.org/conten
 
 ## Citation
 Please use this citation when using Seumetry in your projects:  
-Borggrewe, M. et al 2024. Seumetry: a versatile and comprehensive R toolkit to accelerate high-dimensional flow and mass cytometry data analysis. bioRxiv doi: 10.1101/2024.07.23.604747
+Borggrewe et al. 2026, Seumetry: a versatile and comprehensive R toolkit to accelerate high-dimensional flow and mass cytometry data analysis, Bioinformatics, Volume 42, Issue 10, October 2026, btag730, https://doi.org/10.1093/bioinformatics/btag730
