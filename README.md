@@ -21,7 +21,7 @@ docker run --name {CONTAINER_NAME} -ti -e DISABLE_AUTH=true -p 8787:8787 -v {PRO
 ```
 
 ## Publication
-Seumetry is currently available as a preprint on bioRxiv: https://www.biorxiv.org/content/10.1101/2024.07.23.604747v1
+Seumetry is published in Bioinformatics Journal: [https://www.biorxiv.org/content/10.1101/2024.07.23.604747v1](https://academic.oup.com/bioinformatics/article/42/10/btag730/8913743)
 
 ## Citation
 Please use this citation when using Seumetry in your projects:  
