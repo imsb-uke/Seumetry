@@ -68,7 +68,7 @@ detect_aggregate_channels <- function(seu,
 
 #' Modified Random Sample Consensus (RANSAC) to model aggregate events in channels
 #'
-#' Channels will be subset to positive events only, since aggregates can only be detected in positive events. A modified RANSAC is run that samples on events in the upper top right quadrant (events > 50% of fluorescence in both channels) and only allows linear models with a slope between 0.75 - 1.25 since aggregates follow an almost x = y model. Function returns the best fitting model.
+#' Channels will be subset to positive events only, since aggregates can only be detected in positive events. A modified RANSAC is run that samples on events in the upper top right quadrant (events above the midpoint of the 1st-99th percentile range in both channels) and only allows linear models with a slope between 0.75 - 1.25 since aggregates follow an almost x = y model. Function returns the best fitting model.
 #'
 #' @param formula Formula for linear model containing dependent and independent variable.
 #' @param data Data to run model on (events that pass the pos_threshold).
@@ -106,28 +106,29 @@ run_modified_ransac <- function(formula,
   dependent_variable <- as.character(formula)[[2]]
   independent_variable <- as.character(formula)[[3]]
   # subset data to upper right quadrant; use this for sampling
-  x50 <- (max(data[independent_variable]) - min(data[independent_variable])) / 2
-  y50 <- (max(data[dependent_variable]) - min(data[dependent_variable])) / 2
-  sample_dat <- data[which(data[independent_variable] > x50 & data[dependent_variable] > y50),]
+  # cutoff is the midpoint of the 1st-99th percentile range, so single bright events do not empty the quadrant
+  x50 <- mean(quantile(data[, independent_variable], c(0.01, 0.99)))
+  y50 <- mean(quantile(data[, dependent_variable], c(0.01, 0.99)))
+  quadrant_rows <- which(data[, independent_variable] > x50 & data[, dependent_variable] > y50)
   # not enough events to draw a sample of size min_to_fit; skip this channel
   # combination instead of erroring in sample()
-  if (nrow(sample_dat) < min_to_fit) {
+  if (length(quadrant_rows) < min_to_fit) {
     warning("Not enough events in upper-right quadrant to fit a model (",
-            nrow(sample_dat), " < min_to_fit = ", min_to_fit, "). Skipping.",
+            length(quadrant_rows), " < min_to_fit = ", min_to_fit, "). Skipping.",
             call. = FALSE)
     return(NULL)
   }
   # iterate to generate models
   for (iteration in 1:max_iteration) {
-    # take sample from sample data and build model
-    possible_inliers <- sample(1:nrow(sample_dat), size = min_to_fit, replace = FALSE)
+    # take sample from upper right quadrant (row indices of full data) and build model
+    possible_inliers <- sample(quadrant_rows, size = min_to_fit, replace = FALSE)
     initial_model <- lm(formula, data = data[possible_inliers, ])
     # calculate residuals and identify other inliers
     residuals <- abs(data[, dependent_variable] - predict(initial_model, newdata = data))
     also_inliers <- which(residuals < fit_threshold)
     # evaluate model and replace old model with new one if the sigma is better
     if (length(also_inliers) > data_close) {
-      inliers <- c(possible_inliers, also_inliers)
+      inliers <- union(possible_inliers, also_inliers)
       better_model <- lm(formula, data = data[inliers, ])
       slope <- summary(better_model)$coef[2,1]
       # only use model if slope is between 0.75 and 1.25

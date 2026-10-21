@@ -73,6 +73,37 @@ test_that("run_modified_ransac returns NULL with a warning when too few events",
   expect_null(result)
 })
 
+# singlets (flat, low y, off the x = y line) listed before aggregates (x = y, bright)
+make_ransac_mixed_data <- function(n_single = 300, n_agg = 50, n_bright = 0, seed = 1) {
+  set.seed(seed)
+  x_single <- runif(n_single, 2.5, 4)
+  t_agg <- runif(n_agg, 4, 6)
+  dat <- data.frame(x = c(x_single, t_agg + rnorm(n_agg, sd = 0.05)),
+                    y = c(1.5 + rnorm(n_single, sd = 0.1), t_agg + rnorm(n_agg, sd = 0.05)))
+  # a few very bright events that stretch the channel maximum
+  if (n_bright > 0) dat <- rbind(dat, data.frame(x = runif(n_bright, 15, 20), y = runif(n_bright, 15, 20)))
+  row.names(dat) <- paste0("cell_", seq_len(nrow(dat)))
+  dat
+}
+
+test_that("run_modified_ransac samples initial fit from the upper-right quadrant rows (issue #2)", {
+  # sample positions must index the quadrant subset, not the first rows of data
+  dat <- make_ransac_mixed_data()
+  model <- run_modified_ransac(formula = y ~ x, data = dat)
+  expect_s3_class(model, "lm")
+  expect_equal(unname(coef(model)["x"]), 1, tolerance = 0.1)
+  agg_rows <- row.names(dat)[301:350]
+  expect_true(all(row.names(model$model) %in% agg_rows))
+})
+
+test_that("run_modified_ransac quadrant cutoff is robust to bright outliers (issue #2)", {
+  # half the range would put the cutoff above all aggregates; percentile midpoint does not
+  dat <- make_ransac_mixed_data(n_bright = 3)
+  model <- run_modified_ransac(formula = y ~ x, data = dat)
+  expect_s3_class(model, "lm")
+  expect_equal(unname(coef(model)["x"]), 1, tolerance = 0.1)
+})
+
 test_that("run_modified_ransac errors when formula is not a formula object", {
   dat <- make_ransac_data()
   expect_error(run_modified_ransac(formula = "y ~ x", data = dat),
