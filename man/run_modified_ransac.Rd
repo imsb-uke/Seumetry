@@ -33,5 +33,5 @@ run_modified_ransac(
 Best fitting model for formula and data.
 }
 \description{
-Channels will be subset to positive events only, since aggregates can only be detected in positive events. A modified RANSAC is run that samples on events in the upper top right quadrant (events > 50\% of fluorescence in both channels) and only allows linear models with a slope between 0.75 - 1.25 since aggregates follow an almost x = y model. Function returns the best fitting model.
+Channels will be subset to positive events only, since aggregates can only be detected in positive events. A modified RANSAC is run that samples on events in the upper top right quadrant (events above the midpoint of the 1st-99th percentile range in both channels) and only allows linear models with a slope between 0.75 - 1.25 since aggregates follow an almost x = y model. Function returns the best fitting model.
 }
